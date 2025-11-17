@@ -1,0 +1,98 @@
+openapi: 3.0.4
+info:
+  title: Scotland Yard API
+  version: 1.0.0
+  description: API for playing Scotland Yard.
+
+paths:
+  /stations:
+    get:
+      summary: Get all stations
+      responses:
+        "200":
+          description: List of stations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                      description: ID of the station
+                    pos_x:
+                      type: number
+                      description: X coordinate of the station
+                    pos_y:
+                      type: number
+                      description: Y coordinate of the station
+                    types:
+                      type: array
+                      description: Available transportation types at this station
+                      items:
+                        type: string
+                        enum: [taxi, bus, underground]
+
+  /connections:
+    get:
+      summary: Get all connections between stations
+      responses:
+        "200":
+          description: List of connections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    from:
+                      type: number
+                      description: ID of the origin station
+                    to:
+                      type: number
+                      description: ID of the destination station
+                    mode:
+                      type: string
+                      enum: [taxi, bus, underground, water]
+                      description: Type of connection
+
+  /game/create:
+    post:
+      summary: Create a new game
+      responses:
+        "200":
+          description: Game created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uuid:
+                    type: string
+                    format: uuid
+                    description: Unique ID of the created game
+
+  /game/join:
+    post:
+      summary: Join an existing game
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: ID of the game to join
+      responses:
+        "200":
+          description: Joined game successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Joined game successfully"
