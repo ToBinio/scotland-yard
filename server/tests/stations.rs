@@ -23,7 +23,7 @@ struct Station {
 async fn get_stations() {
     let server = test_server();
 
-    let response = server.get("/stations").await;
+    let response = server.get("/map/stations").await;
 
     response.assert_status_ok();
     let response = response.json::<Vec<Station>>();

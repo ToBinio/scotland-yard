@@ -7,7 +7,7 @@ type Station = {
 };
 
 let { data: stations } = await useFetch<Station[]>(
-  "http://localhost:8080/stations",
+  "http://localhost:8080/map/stations",
 );
 </script>
 

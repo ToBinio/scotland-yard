@@ -23,7 +23,7 @@ struct Connection {
 async fn get_connections() {
     let server = test_server();
 
-    let response = server.get("/connections").await;
+    let response = server.get("/map/connections").await;
 
     response.assert_status_ok();
     let response = response.json::<Vec<Connection>>();
