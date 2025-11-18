@@ -5,7 +5,7 @@ info:
   description: API for playing Scotland Yard.
 
 paths:
-  /stations:
+  /map/stations:
     get:
       summary: Get all stations
       responses:
@@ -34,7 +34,7 @@ paths:
                         type: string
                         enum: [taxi, bus, underground]
 
-  /connections:
+  /map/connections:
     get:
       summary: Get all connections between stations
       responses:
@@ -58,41 +58,31 @@ paths:
                       enum: [taxi, bus, underground, water]
                       description: Type of connection
 
-  /game/create:
-    post:
-      summary: Create a new game
+  /map/rounds:
+    get:
+      summary: Get structure of rounds
       responses:
         "200":
-          description: Game created successfully
+          description: List of rounds
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  uuid:
-                    type: string
-                    format: uuid
-                    description: Unique ID of the created game
+                type: array
+                items:
+                  type: object
+                  properties:
+                    index:
+                      type: number
+                      description: Index of the round
+                    show_mister_x:
+                      type: boolean
+                      description: Whether Mister X is shown in this round
 
-  /game/join:
-    post:
-      summary: Join an existing game
-      parameters:
-        - in: query
-          name: id
-          schema:
-            type: string
-            format: uuid
-          required: true
-          description: ID of the game to join
+  /game/ws:
+    get:
+      summary: Upgrade to WebSocket
+      description: |
+        Clients connect to this endpoint using a WebSocket handshake.
       responses:
-        "200":
-          description: Joined game successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Joined game successfully"
+        "101":
+          description: Switching Protocols (WebSocket upgrade)
