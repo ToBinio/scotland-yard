@@ -23,4 +23,4 @@ dotenv = "0.15.0"
 cookie = "0.18.1"
 
 [dev-dependencies]
-axum-test = { version = "17.3.0" }
+axum-test = { version = "17.3.0", features = ["ws"] }
