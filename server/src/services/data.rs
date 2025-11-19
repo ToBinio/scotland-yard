@@ -92,13 +92,11 @@ impl DataService {
     pub fn get_all_rounds(&self) -> Vec<Round> {
         const SHOWS_MISTER_X: [i32; 5] = [3, 8, 13, 18, 24];
 
-        let rounds = (1..=24)
+        (1..=24)
             .map(|index| Round {
                 index: index as u8,
-                show_mister_x: SHOWS_MISTER_X.contains(&(index as i32)),
+                show_mister_x: SHOWS_MISTER_X.contains(&{ index }),
             })
-            .collect();
-
-        rounds
+            .collect()
     }
 }

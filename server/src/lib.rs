@@ -55,7 +55,7 @@ pub fn app() -> Router {
         .allow_methods(Any);
 
     let state = AppState {
-        data: Arc::new(DataService::default()),
+        data: Arc::new(DataService),
     };
 
     Router::new()
