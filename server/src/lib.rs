@@ -1,4 +1,11 @@
-use axum::{Json, Router, http::StatusCode, response::IntoResponse, response::Response};
+use std::sync::Arc;
+
+use axum::{
+    Json, Router,
+    extract::FromRef,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use serde_json::json;
 use thiserror::Error;
 use tower::ServiceBuilder;
@@ -8,7 +15,10 @@ use tower_http::{
 };
 use tracing::Level;
 
+use crate::services::data::DataService;
+
 mod routes;
+mod services;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum AppError {
@@ -28,7 +38,15 @@ impl IntoResponse for AppError {
 }
 
 #[derive(Clone)]
-pub struct AppState {}
+pub struct AppState {
+    data: Arc<DataService>,
+}
+
+impl FromRef<AppState> for Arc<DataService> {
+    fn from_ref(input: &AppState) -> Self {
+        input.data.clone()
+    }
+}
 
 pub fn app() -> Router {
     let cors_layer = CorsLayer::new()
@@ -36,7 +54,9 @@ pub fn app() -> Router {
         .allow_origin(Any)
         .allow_methods(Any);
 
-    let state = AppState {};
+    let state = AppState {
+        data: Arc::new(DataService::default()),
+    };
 
     Router::new()
         .merge(routes::routes(state))
