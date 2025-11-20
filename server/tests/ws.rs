@@ -1,6 +1,9 @@
 use serde_json::json;
 
-use crate::common::{assert_receive_error, get_ws_connection, send_message, test_server};
+use crate::common::{
+    test_server,
+    ws::{assert_receive_error, get_ws_connection, send_message},
+};
 
 mod common;
 

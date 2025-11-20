@@ -1,12 +1,5 @@
 use axum_test::{TestServer, TestWebSocket};
 use serde::Deserialize;
-use serde_json::json;
-use server::app;
-
-pub fn test_server() -> TestServer {
-    let app = app();
-    TestServer::builder().http_transport().build(app).unwrap()
-}
 
 pub async fn get_ws_connection(server: &TestServer) -> TestWebSocket {
     server
@@ -70,24 +63,4 @@ pub async fn assert_receive_error(connection: &mut TestWebSocket, message: &str)
     let (received_name, response) = receive_message::<Error>(connection).await;
     assert_eq!(received_name, "error");
     assert_eq!(response.unwrap().message, message);
-}
-
-pub async fn create_game(socket: &mut TestWebSocket) -> String {
-    send_message(
-        socket,
-        "createGame",
-        Some(json!({
-            "number_of_detectives": 4,
-        })),
-    )
-    .await;
-
-    #[derive(Debug, Deserialize)]
-    struct GameCreated {
-        id: String,
-    }
-
-    let response = assert_receive_message::<GameCreated>(socket, "game").await;
-
-    response.unwrap().id
 }

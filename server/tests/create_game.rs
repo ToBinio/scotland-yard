@@ -2,8 +2,9 @@ use serde::Deserialize;
 use serde_json::json;
 
 use crate::common::{
-    assert_receive_error, assert_receive_message, create_game, get_ws_connection, send_message,
+    connection::create_game,
     test_server,
+    ws::{assert_receive_error, assert_receive_message, get_ws_connection, send_message},
 };
 
 mod common;
