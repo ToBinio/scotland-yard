@@ -9,15 +9,6 @@ use crate::common::{
 mod common;
 
 #[tokio::test]
-async fn can_connect() {
-    let server = test_server();
-
-    let response = server.get_websocket("/game/ws").await;
-
-    response.assert_status_switching_protocols();
-}
-
-#[tokio::test]
 async fn can_start_game() {
     let server = test_server();
 
@@ -42,10 +33,13 @@ async fn can_start_game() {
     let response = assert_receive_message::<GameStarted>(&mut player_2, "gameStarted").await;
     let role_2 = response.unwrap().role;
 
-    assert!(
-        role_1 == "detective" && role_2 == "mister_x"
-            || role_1 == "mister_x" && role_2 == "detective"
-    );
+    if role_1 == "detective" {
+        assert_eq!(role_1, "detective");
+        assert_eq!(role_2, "mister_x");
+    } else {
+        assert_eq!(role_1, "mister_x");
+        assert_eq!(role_2, "detective");
+    }
 }
 
 #[tokio::test]
@@ -67,7 +61,12 @@ async fn can_not_join_unknown_game() {
 
     let mut player = get_ws_connection(&server).await;
 
-    send_message(&mut player, "joinGame", Some(json!({ "id": "unknown" }))).await;
+    send_message(
+        &mut player,
+        "joinGame",
+        Some(json!({ "id": "fffdc005-f76c-49d1-b39a-cbbb801eaece" })),
+    )
+    .await;
 
     assert_receive_error(&mut player, "game does not exist").await;
 }

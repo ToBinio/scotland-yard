@@ -23,6 +23,7 @@ dotenv = "0.15.0"
 cookie = "0.18.1"
 axum-extra = { version = "0.12.2", features = ["typed-header"] }
 futures-util = "0.3.31"
+uuid = { version = "1.18.1", features = ["serde", "v4"] }
 
 [dev-dependencies]
 axum-test = { version = "17.3.0", features = ["ws"] }

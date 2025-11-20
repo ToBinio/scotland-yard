@@ -34,11 +34,17 @@ pub async fn receive_message<T: serde::de::DeserializeOwned>(
     connection: &mut TestWebSocket,
 ) -> (String, Option<T>) {
     let message = connection.receive_text().await;
-    let mut split = message.split(" ");
+    let mut split = message.splitn(2, " ");
 
-    let name = split.next().unwrap().to_string();
+    let name = split
+        .next()
+        .unwrap()
+        .trim_matches('[')
+        .trim_end_matches(']')
+        .to_string();
 
     if let Some(data) = split.next() {
+        println!("{}", data);
         let data = serde_json::from_str(data).unwrap();
         return (name, Some(data));
     }
@@ -71,7 +77,7 @@ pub async fn create_game(socket: &mut TestWebSocket) -> String {
         socket,
         "createGame",
         Some(json!({
-            "number_of_detecives": 4,
+            "number_of_detectives": 4,
         })),
     )
     .await;

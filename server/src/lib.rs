@@ -8,6 +8,7 @@ use axum::{
 };
 use serde_json::json;
 use thiserror::Error;
+use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -15,7 +16,10 @@ use tower_http::{
 };
 use tracing::Level;
 
-use crate::services::data::DataService;
+use crate::services::{
+    data::DataService,
+    lobby::{LobbyService, LobbyServiceHandle},
+};
 
 mod routes;
 mod services;
@@ -40,11 +44,18 @@ impl IntoResponse for AppError {
 #[derive(Clone)]
 pub struct AppState {
     data: Arc<DataService>,
+    lobby: LobbyServiceHandle,
 }
 
 impl FromRef<AppState> for Arc<DataService> {
     fn from_ref(input: &AppState) -> Self {
         input.data.clone()
+    }
+}
+
+impl FromRef<AppState> for LobbyServiceHandle {
+    fn from_ref(input: &AppState) -> Self {
+        input.lobby.clone()
     }
 }
 
@@ -56,6 +67,7 @@ pub fn app() -> Router {
 
     let state = AppState {
         data: Arc::new(DataService),
+        lobby: Arc::new(Mutex::new(LobbyService::default())),
     };
 
     Router::new()

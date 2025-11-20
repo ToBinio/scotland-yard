@@ -2,7 +2,7 @@ use axum::Router;
 
 use crate::AppState;
 
-mod game;
+pub mod game;
 mod map;
 
 pub fn routes(state: AppState) -> Router {
