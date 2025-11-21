@@ -1,5 +1,5 @@
-use server::app;
-use std::env;
+use server::{app, services::data::service::DataService};
+use std::{env, sync::Arc};
 use tracing::info;
 
 #[tokio::main]
@@ -18,5 +18,7 @@ async fn main() {
 
     info!("listening on {}", listener.local_addr().unwrap());
 
-    axum::serve(listener, app()).await.unwrap();
+    axum::serve(listener, app(Arc::new(DataService::default())))
+        .await
+        .unwrap();
 }

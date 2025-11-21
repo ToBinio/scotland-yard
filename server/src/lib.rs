@@ -17,13 +17,13 @@ use tower_http::{
 use tracing::Level;
 
 use crate::services::{
-    data::DataService,
+    data::DataServiceHandle,
     game::{GameService, GameServiceHandle},
     lobby::{LobbyService, LobbyServiceHandle},
 };
 
 mod routes;
-mod services;
+pub mod services;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum AppError {
@@ -44,12 +44,12 @@ impl IntoResponse for AppError {
 
 #[derive(Clone)]
 pub struct AppState {
-    data: Arc<DataService>,
+    data: DataServiceHandle,
     lobby: LobbyServiceHandle,
     game: GameServiceHandle,
 }
 
-impl FromRef<AppState> for Arc<DataService> {
+impl FromRef<AppState> for DataServiceHandle {
     fn from_ref(input: &AppState) -> Self {
         input.data.clone()
     }
@@ -67,16 +67,16 @@ impl FromRef<AppState> for GameServiceHandle {
     }
 }
 
-pub fn app() -> Router {
+pub fn app(data_service: DataServiceHandle) -> Router {
     let cors_layer = CorsLayer::new()
         .allow_headers(Any)
         .allow_origin(Any)
         .allow_methods(Any);
 
     let state = AppState {
-        data: Arc::new(DataService),
+        data: data_service.clone(),
         lobby: Arc::new(Mutex::new(LobbyService::default())),
-        game: Arc::new(Mutex::new(GameService::default())),
+        game: Arc::new(Mutex::new(GameService::new(data_service.clone()))),
     };
 
     Router::new()

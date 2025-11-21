@@ -12,7 +12,7 @@ use crate::{
         MisterXAbilityData, MisterXData, ServerPacket, StartMovePacket,
     },
     services::{
-        data::DataService,
+        data::DataServiceHandle,
         lobby::{Lobby, LobbyId},
     },
 };
@@ -43,7 +43,7 @@ struct MisterX {
 }
 
 struct Game {
-    data_service: Arc<DataService>,
+    data_service: DataServiceHandle,
 
     detective_ws: Vec<Sender<ServerPacket>>,
     detectives: Vec<Detective>,
@@ -137,13 +137,19 @@ pub enum GameServiceError {
     NotEnoughPlayers,
 }
 
-#[derive(Default)]
 pub struct GameService {
     games: HashMap<GameId, Game>,
-    data_service: Arc<DataService>,
+    data_service: DataServiceHandle,
 }
 
 impl GameService {
+    pub fn new(data_service: DataServiceHandle) -> Self {
+        Self {
+            games: HashMap::new(),
+            data_service,
+        }
+    }
+
     pub fn add_game_from_lobby(
         &mut self,
         lobby: &Lobby,
