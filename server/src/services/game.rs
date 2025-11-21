@@ -82,7 +82,7 @@ impl GameService {
 
         let game = Game {
             detective_ws: detectives_ws,
-            detectives: detectives,
+            detectives,
             mister_x_ws: lobby.players[mister_x].ws_sender.clone(),
             mister_x: MisterX {
                 station_id: 0,
@@ -97,9 +97,7 @@ impl GameService {
     }
 
     fn get_game(&self, game_id: &GameId) -> Result<&Game, GameServiceError> {
-        self.games
-            .get(&game_id)
-            .ok_or(GameServiceError::UnknownGame)
+        self.games.get(game_id).ok_or(GameServiceError::UnknownGame)
     }
 
     pub async fn start(&self, game_id: &GameId) -> Result<(), GameServiceError> {

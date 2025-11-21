@@ -4,7 +4,7 @@ use thiserror::Error;
 use tokio::sync::{Mutex, mpsc::Sender};
 use uuid::Uuid;
 
-use crate::routes::game::packet::{GameStartedPacket, Role, ServerPacket};
+use crate::routes::game::packet::ServerPacket;
 
 pub struct Settings {
     pub number_of_detectives: u8,
@@ -68,7 +68,7 @@ impl LobbyService {
 
         let lobby = self
             .lobbies
-            .get_mut(&lobby_id)
+            .get_mut(lobby_id)
             .ok_or(LobbyServiceError::UnknownLobby)?;
         lobby.players.push(Player {
             uuid: id,
