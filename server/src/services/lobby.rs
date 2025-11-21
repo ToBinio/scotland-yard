@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::routes::game::packet::ServerPacket;
 
 pub struct Settings {
-    pub number_of_detectives: u8,
+    pub number_of_detectives: usize,
 }
 
 pub struct Player {
@@ -37,7 +37,7 @@ pub struct LobbyService {
 }
 
 impl LobbyService {
-    pub fn create(&mut self, number_of_detectives: u8) -> LobbyId {
+    pub fn create(&mut self, number_of_detectives: usize) -> LobbyId {
         let id = Uuid::new_v4();
 
         self.lobbies.insert(

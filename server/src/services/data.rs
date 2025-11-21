@@ -1,5 +1,6 @@
 use std::sync::LazyLock;
 
+use rand::seq::SliceRandom;
 use serde::Serialize;
 
 #[derive(Serialize, Clone)]
@@ -97,6 +98,21 @@ impl DataService {
                 index: index as u8,
                 show_mister_x: SHOWS_MISTER_X.contains(&{ index }),
             })
+            .collect()
+    }
+
+    pub fn get_colors(&self) -> [&str; 5] {
+        ["red", "blue", "green", "yellow", "purple"]
+    }
+
+    pub fn get_random_stations(&self, count: usize) -> Vec<u8> {
+        let mut rng = rand::rng();
+        let mut stations = self.get_all_stations();
+        stations.shuffle(&mut rng);
+        stations
+            .into_iter()
+            .take(count)
+            .map(|station| station.id)
             .collect()
     }
 }

@@ -3,7 +3,7 @@ use std::{error::Error, fmt::Display};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use thiserror::Error;
 
-use crate::services::lobby::LobbyId;
+use crate::services::{game::Role, lobby::LobbyId};
 
 #[derive(Deserialize, Serialize)]
 pub struct ErrorPacket {
@@ -12,7 +12,7 @@ pub struct ErrorPacket {
 
 #[derive(Deserialize, Serialize)]
 pub struct CreateGamePacket {
-    pub number_of_detectives: u8,
+    pub number_of_detectives: usize,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -26,21 +26,53 @@ pub struct JoinGamePacket {
 }
 
 #[derive(Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Role {
-    Detective,
-    MisterX,
-}
-
-#[derive(Deserialize, Serialize)]
 pub struct GameStartedPacket {
     pub role: Role,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct StartMovePacket {
+    pub role: Role,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct DetectiveData {
+    pub color: String,
+    pub station_id: u8,
+    pub available_transport: DetectiveTransportData,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct DetectiveTransportData {
+    pub taxi: u32,
+    pub bus: u32,
+    pub underground: u32,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct MisterXData {
+    pub station_id: Option<u8>,
+    pub abilities: MisterXAbilityData,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct MisterXAbilityData {
+    pub double_move: u32,
+    pub hidden: u32,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct GameStatePacket {
+    pub players: Vec<DetectiveData>,
+    pub mister_x: MisterXData,
 }
 
 pub enum ServerPacket {
     Error(ErrorPacket),
     Game(GamePacket),
     GameStarted(GameStartedPacket),
+    StartMove(StartMovePacket),
+    GameState(GameStatePacket),
 }
 
 pub enum ClientPacket {
@@ -66,6 +98,12 @@ impl Display for ServerPacket {
             ServerPacket::Game(content) => ("game", Some(serde_json::to_string(content).unwrap())),
             ServerPacket::GameStarted(content) => {
                 ("gameStarted", Some(serde_json::to_string(content).unwrap()))
+            }
+            ServerPacket::StartMove(content) => {
+                ("startMove", Some(serde_json::to_string(content).unwrap()))
+            }
+            ServerPacket::GameState(content) => {
+                ("gameState", Some(serde_json::to_string(content).unwrap()))
             }
         };
 

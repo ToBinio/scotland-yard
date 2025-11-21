@@ -51,11 +51,11 @@ async fn correctly_starts_round() {
         mister_x: MisterXGame,
     }
 
-    let message = assert_receive_message::<Game>(&mut mister_x, "game").await;
+    let message = assert_receive_message::<Game>(&mut mister_x, "gameState").await;
     assert!(message.is_some());
     assert!(message.unwrap().mister_x.station_id.is_some());
 
-    let message = assert_receive_message::<Game>(&mut detective, "game").await;
+    let message = assert_receive_message::<Game>(&mut detective, "gameState").await;
     assert!(message.is_some());
 
     let message = message.unwrap();
