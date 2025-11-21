@@ -69,7 +69,7 @@ async fn can_not_join_unknown_game() {
     )
     .await;
 
-    assert_receive_error(&mut player, "game does not exist").await;
+    assert_receive_error(&mut player, "unknown lobby").await;
 }
 
 #[tokio::test]
@@ -109,5 +109,5 @@ async fn can_not_join_started_game() {
     let _ = assert_receive_message::<GameStarted>(&mut player_2, "gameStarted").await;
 
     send_message(&mut player_3, "joinGame", Some(json!({ "id": game_id }))).await;
-    assert_receive_error(&mut player_3, "game does not exist").await;
+    assert_receive_error(&mut player_3, "unknown lobby").await;
 }

@@ -1,5 +1,8 @@
+use std::time::Duration;
+
 use axum_test::{TestServer, TestWebSocket};
 use serde::Deserialize;
+use tokio::time::timeout;
 
 pub async fn get_ws_connection(server: &TestServer) -> TestWebSocket {
     server
@@ -26,7 +29,9 @@ pub async fn send_message(
 pub async fn receive_message<T: serde::de::DeserializeOwned>(
     connection: &mut TestWebSocket,
 ) -> (String, Option<T>) {
-    let message = connection.receive_text().await;
+    let message = timeout(Duration::from_millis(500), connection.receive_text())
+        .await
+        .unwrap();
     let mut split = message.splitn(2, " ");
 
     let name = split
@@ -37,7 +42,6 @@ pub async fn receive_message<T: serde::de::DeserializeOwned>(
         .to_string();
 
     if let Some(data) = split.next() {
-        println!("{}", data);
         let data = serde_json::from_str(data).unwrap();
         return (name, Some(data));
     }
@@ -49,7 +53,10 @@ pub async fn assert_receive_message<T: serde::de::DeserializeOwned>(
     connection: &mut TestWebSocket,
     name: &str,
 ) -> Option<T> {
-    let (received_name, message) = receive_message(connection).await;
+    let (received_name, message) = timeout(Duration::from_millis(200), receive_message(connection))
+        .await
+        .map_err(|_| format!("expected ws packet '{}' but did not recieve", name))
+        .unwrap();
     assert_eq!(received_name, name);
     message
 }

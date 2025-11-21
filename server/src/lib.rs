@@ -18,6 +18,7 @@ use tracing::Level;
 
 use crate::services::{
     data::DataService,
+    game::{GameService, GameServiceHandle},
     lobby::{LobbyService, LobbyServiceHandle},
 };
 
@@ -45,6 +46,7 @@ impl IntoResponse for AppError {
 pub struct AppState {
     data: Arc<DataService>,
     lobby: LobbyServiceHandle,
+    game: GameServiceHandle,
 }
 
 impl FromRef<AppState> for Arc<DataService> {
@@ -59,6 +61,12 @@ impl FromRef<AppState> for LobbyServiceHandle {
     }
 }
 
+impl FromRef<AppState> for GameServiceHandle {
+    fn from_ref(input: &AppState) -> Self {
+        input.game.clone()
+    }
+}
+
 pub fn app() -> Router {
     let cors_layer = CorsLayer::new()
         .allow_headers(Any)
@@ -68,6 +76,7 @@ pub fn app() -> Router {
     let state = AppState {
         data: Arc::new(DataService),
         lobby: Arc::new(Mutex::new(LobbyService::default())),
+        game: Arc::new(Mutex::new(GameService::default())),
     };
 
     Router::new()

@@ -7,12 +7,16 @@ use axum::{
     response::IntoResponse,
     routing::any,
 };
-use tokio::sync::mpsc::{self};
+use thiserror::Error;
+use tokio::sync::mpsc::{self, Sender};
 
 use crate::{
     AppState,
-    routes::game::packet::{ClientPacket, ErrorPacket, GamePacket, ServerPacket},
-    services::lobby::{LobbyId, LobbyServiceHandle, PlayerId},
+    routes::game::packet::{ClientPacket, GamePacket, ServerPacket},
+    services::{
+        game::{GameServiceError, GameServiceHandle},
+        lobby::{LobbyId, LobbyServiceError, LobbyServiceHandle, PlayerId},
+    },
 };
 
 use futures_util::{sink::SinkExt, stream::StreamExt};
@@ -28,10 +32,15 @@ pub fn routes(state: AppState) -> Router {
 async fn ws_handler(
     ws: WebSocketUpgrade,
     State(lobby_service): State<LobbyServiceHandle>,
+    State(game_service): State<GameServiceHandle>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(|socket| handle_socket(socket, lobby_service))
+    ws.on_upgrade(|socket| handle_socket(socket, lobby_service, game_service))
 }
-async fn handle_socket(socket: WebSocket, lobby_service: LobbyServiceHandle) {
+async fn handle_socket(
+    socket: WebSocket,
+    lobby_service: LobbyServiceHandle,
+    game_service: GameServiceHandle,
+) {
     let (mut ws_sender, mut ws_receiver) = socket.split();
 
     let (tx, mut rx) = mpsc::channel(16);
@@ -39,15 +48,19 @@ async fn handle_socket(socket: WebSocket, lobby_service: LobbyServiceHandle) {
     let mut send_task = tokio::spawn(async move {
         while let Some(packet) = rx.recv().await {
             let msg = ServerPacket::to_string(&packet);
-            println!("msg - {}", msg);
             let _ = ws_sender.send(Message::text(msg)).await;
         }
     });
 
     let mut recv_task = {
         tokio::spawn(async move {
-            let mut player_id: Option<PlayerId> = None;
-            let mut lobby_id: Option<LobbyId> = None;
+            let mut connection = Connection {
+                player_id: None,
+                lobby_id: None,
+                lobby_service,
+                game_service,
+                sender: tx.clone(),
+            };
 
             while let Some(Ok(msg)) = ws_receiver.next().await {
                 let packet = match msg {
@@ -63,63 +76,13 @@ async fn handle_socket(socket: WebSocket, lobby_service: LobbyServiceHandle) {
                 let packet = match packet {
                     Ok(packet) => packet,
                     Err(err) => {
-                        tx.send(ServerPacket::Error(ErrorPacket {
-                            message: err.to_string(),
-                        }))
-                        .await
-                        .unwrap();
-
+                        tx.send(ServerPacket::from_error(err)).await.unwrap();
                         continue;
                     }
                 };
 
-                match packet {
-                    ClientPacket::CreateGame(packet) => {
-                        let id = lobby_service
-                            .lock()
-                            .await
-                            .create(packet.number_of_detectives);
-                        tx.send(ServerPacket::Game(GamePacket { id }))
-                            .await
-                            .unwrap();
-                    }
-                    ClientPacket::JoinGame(packet) => {
-                        if player_id.is_some() {
-                            tx.send(ServerPacket::Error(ErrorPacket {
-                                message: "game already joined".to_string(),
-                            }))
-                            .await
-                            .unwrap();
-
-                            continue;
-                        }
-
-                        let result = lobby_service.lock().await.join(packet.id, tx.clone());
-
-                        match result {
-                            Ok(id) => {
-                                lobby_id = Some(packet.id);
-                                player_id = Some(id);
-                            }
-                            Err(_) => tx
-                                .send(ServerPacket::Error(ErrorPacket {
-                                    message: "game does not exist".to_string(),
-                                }))
-                                .await
-                                .unwrap(),
-                        }
-                    }
-                    ClientPacket::StartGame => {
-                        let result = lobby_service.lock().await.start(lobby_id.unwrap()).await;
-
-                        if result.is_err() {
-                            tx.send(ServerPacket::Error(ErrorPacket {
-                                message: "game does not have enough players".to_string(),
-                            }))
-                            .await
-                            .unwrap()
-                        }
-                    }
+                if let Err(err) = connection.handle_client_packet(packet).await {
+                    connection.send(ServerPacket::from_error(err)).await;
                 }
             }
         })
@@ -128,5 +91,84 @@ async fn handle_socket(socket: WebSocket, lobby_service: LobbyServiceHandle) {
     tokio::select! {
         _ = &mut send_task => recv_task.abort(),
         _ = &mut recv_task => send_task.abort(),
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum ConnectionError {
+    #[error(transparent)]
+    Lobby(#[from] LobbyServiceError),
+
+    #[error(transparent)]
+    Game(#[from] GameServiceError),
+
+    #[error("game already joined")]
+    GameAlreadyJoined,
+}
+
+struct Connection {
+    player_id: Option<PlayerId>,
+    lobby_id: Option<LobbyId>,
+
+    lobby_service: LobbyServiceHandle,
+    game_service: GameServiceHandle,
+
+    sender: Sender<ServerPacket>,
+}
+
+impl Connection {
+    async fn send(&mut self, packet: ServerPacket) {
+        self.sender.send(packet).await.unwrap();
+    }
+
+    async fn handle_client_packet(&mut self, packet: ClientPacket) -> Result<(), ConnectionError> {
+        match packet {
+            ClientPacket::CreateGame(packet) => {
+                let id = self
+                    .lobby_service
+                    .lock()
+                    .await
+                    .create(packet.number_of_detectives);
+                self.send(ServerPacket::Game(GamePacket { id })).await;
+            }
+            ClientPacket::JoinGame(packet) => {
+                if self.player_id.is_some() {
+                    return Err(ConnectionError::GameAlreadyJoined);
+                }
+
+                let id = self
+                    .lobby_service
+                    .lock()
+                    .await
+                    .join(&packet.id, self.sender.clone())?;
+
+                self.lobby_id = Some(packet.id);
+                self.player_id = Some(id);
+            }
+            ClientPacket::StartGame => {
+                let ref_lobby_service = self.lobby_service.lock().await;
+                let lobby = ref_lobby_service.get_lobby(&self.lobby_id.unwrap());
+
+                self.game_service
+                    .lock()
+                    .await
+                    .add_game_from_lobby(lobby.unwrap(), &self.lobby_id.unwrap())?;
+
+                drop(ref_lobby_service);
+
+                self.lobby_service
+                    .lock()
+                    .await
+                    .close_lobby(&self.lobby_id.unwrap());
+
+                self.game_service
+                    .lock()
+                    .await
+                    .start(&self.lobby_id.unwrap())
+                    .await?;
+            }
+        }
+
+        Ok(())
     }
 }

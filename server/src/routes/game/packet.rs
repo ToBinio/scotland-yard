@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{error::Error, fmt::Display};
 
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use thiserror::Error;
@@ -74,6 +74,14 @@ impl Display for ServerPacket {
         } else {
             f.write_fmt(format_args!("[{}]", name))
         }
+    }
+}
+
+impl ServerPacket {
+    pub fn from_error(err: impl Error) -> ServerPacket {
+        ServerPacket::Error(ErrorPacket {
+            message: err.to_string(),
+        })
     }
 }
 

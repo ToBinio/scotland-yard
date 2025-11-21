@@ -6,18 +6,18 @@ use uuid::Uuid;
 
 use crate::routes::game::packet::{GameStartedPacket, Role, ServerPacket};
 
-struct Settings {
-    number_of_detectives: u8,
+pub struct Settings {
+    pub number_of_detectives: u8,
 }
 
-struct Player {
-    uuid: Uuid,
-    ws_sender: Sender<ServerPacket>,
+pub struct Player {
+    pub uuid: Uuid,
+    pub ws_sender: Sender<ServerPacket>,
 }
 
-struct Lobby {
-    settings: Settings,
-    players: Vec<Player>,
+pub struct Lobby {
+    pub settings: Settings,
+    pub players: Vec<Player>,
 }
 
 pub type LobbyId = Uuid;
@@ -27,10 +27,8 @@ pub type LobbyServiceHandle = Arc<Mutex<LobbyService>>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum LobbyServiceError {
-    #[error("unknown Lobby")]
+    #[error("unknown lobby")]
     UnknownLobby,
-    #[error("unknown Lobby")]
-    NotEnoughPlayers,
 }
 
 #[derive(Default)]
@@ -55,9 +53,15 @@ impl LobbyService {
         id
     }
 
+    pub fn get_lobby(&self, lobby_id: &LobbyId) -> Result<&Lobby, LobbyServiceError> {
+        self.lobbies
+            .get(lobby_id)
+            .ok_or(LobbyServiceError::UnknownLobby)
+    }
+
     pub fn join(
         &mut self,
-        lobby_id: LobbyId,
+        lobby_id: &LobbyId,
         sender: Sender<ServerPacket>,
     ) -> Result<PlayerId, LobbyServiceError> {
         let id = Uuid::new_v4();
@@ -74,31 +78,7 @@ impl LobbyService {
         Ok(id)
     }
 
-    pub async fn start(&self, lobby_id: LobbyId) -> Result<(), LobbyServiceError> {
-        let lobby = self.lobbies.get(&lobby_id).unwrap();
-
-        if lobby.players.len() < 2 {
-            return Err(LobbyServiceError::NotEnoughPlayers);
-        }
-
-        lobby.players[0]
-            .ws_sender
-            .send(ServerPacket::GameStarted(GameStartedPacket {
-                role: Role::MisterX,
-            }))
-            .await
-            .unwrap();
-
-        for player in &lobby.players[1..] {
-            player
-                .ws_sender
-                .send(ServerPacket::GameStarted(GameStartedPacket {
-                    role: Role::Detective,
-                }))
-                .await
-                .unwrap();
-        }
-
-        Ok(())
+    pub fn close_lobby(&mut self, lobby_id: &LobbyId) {
+        self.lobbies.remove(lobby_id);
     }
 }
