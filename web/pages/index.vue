@@ -1,18 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
-
-type Station = {
-  id: number;
-  pos_x: number;
-  pos_y: number;
-  types: ("taxi" | "bus" | "underground")[];
-};
-
-type Connection = {
-  from: number;
-  to: number;
-  mode: "taxi" | "bus" | "underground" | "water";
-};
+import type { Connection, Station } from "~/types/canvas";
 
 let { data: stations } = await useFetch<Station[]>(
   "http://localhost:8080/map/stations",
