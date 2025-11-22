@@ -39,6 +39,8 @@ let isDragging = false;
 let dragStartX = 0;
 let dragStartY = 0;
 
+const STATION_DISTANCE = 20;
+
 function draw() {
   if (!canvasRef.value || !stations || !connections) return;
   const ctx = canvasRef.value.getContext("2d");
@@ -67,7 +69,7 @@ function draw() {
   stations.value!.forEach((station) => {
     ctx.fillStyle = "black";
     ctx.beginPath();
-    ctx.arc(station.pos_x, station.pos_y, 20, 0, Math.PI * 2);
+    ctx.arc(station.pos_x, station.pos_y, STATION_DISTANCE, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = "white";
@@ -116,6 +118,27 @@ function onMouseMove(event: MouseEvent) {
 function onMouseUp() {
   isDragging = false;
 }
+
+function onClick(event: MouseEvent) {
+  if (!canvasRef.value || !stations.value) return;
+
+  const rect = canvasRef.value.getBoundingClientRect();
+  const mouseX = (event.clientX - rect.left - offsetX) / zoom;
+  const mouseY = (event.clientY - rect.top - offsetY) / zoom;
+
+  stations.value.forEach((station) => {
+    const dx = mouseX - station.pos_x;
+    const dy = mouseY - station.pos_y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance <= STATION_DISTANCE) {
+      onStationClick(station.id);
+    }
+  });
+}
+
+function onStationClick(id: number) {
+  console.log("Station geklickt:", id);
+}
 </script>
 
 <template>
@@ -130,6 +153,7 @@ function onMouseUp() {
       @mousemove="onMouseMove"
       @mouseup="onMouseUp"
       @mouseleave="onMouseUp"
+      @click="onClick"
     >
     </canvas>
   </div>
