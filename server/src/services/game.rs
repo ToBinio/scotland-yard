@@ -111,6 +111,7 @@ impl Game {
                     double_move: self.mister_x.double_move,
                     hidden: self.mister_x.hidden,
                 },
+                moves: vec![],
             },
         };
 

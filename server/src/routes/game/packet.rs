@@ -50,9 +50,19 @@ pub struct DetectiveTransportData {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum MoveType {
+    Taxi,
+    Bus,
+    Underground,
+    Hidden,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
 pub struct MisterXData {
     pub station_id: Option<u8>,
     pub abilities: MisterXAbilityData,
+    pub moves: Vec<MoveType>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

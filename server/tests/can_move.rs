@@ -26,8 +26,8 @@ async fn can_move() {
     let mut server = test_server();
     let (mut mister_x, mut detective) = start_game(&mut server).await;
 
-    receive_start_move_message(&mut mister_x, "misterX").await;
-    receive_start_move_message(&mut detective, "misterX").await;
+    receive_start_move_message(&mut mister_x, "mister_x").await;
+    receive_start_move_message(&mut detective, "mister_x").await;
 
     assert_receive_message::<Game>(&mut mister_x, "gameState").await;
     let game_state = assert_receive_message::<Game>(&mut detective, "gameState").await;
