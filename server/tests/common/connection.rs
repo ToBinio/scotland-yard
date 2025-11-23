@@ -2,10 +2,7 @@ use axum_test::{TestServer, TestWebSocket};
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::common::{
-    test_server,
-    ws::{assert_receive_message, get_ws_connection, send_message},
-};
+use crate::common::ws::{assert_receive_message, get_ws_connection, send_message};
 
 pub async fn create_game(socket: &mut TestWebSocket) -> String {
     send_message(

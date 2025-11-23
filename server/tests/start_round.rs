@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::common::{connection::start_game, test_server, ws::assert_receive_message};
+use crate::common::{connection::start_game, data::Game, test_server, ws::assert_receive_message};
 
 mod common;
 
@@ -18,38 +18,6 @@ async fn correctly_starts_round() {
     assert_eq!(message.unwrap().role, "mister_x");
     let message = assert_receive_message::<StartMove>(&mut detective, "startMove").await;
     assert_eq!(message.unwrap().role, "mister_x");
-
-    #[derive(Debug, Deserialize)]
-    struct Transport {
-        taxi: u32,
-        bus: u32,
-        underground: u32,
-    }
-
-    #[derive(Debug, Deserialize)]
-    struct PlayerGame {
-        color: String,
-        station_id: u32,
-        available_transport: Transport,
-    }
-
-    #[derive(Debug, Deserialize)]
-    struct Abilities {
-        double_move: u32,
-        hidden: u32,
-    }
-
-    #[derive(Debug, Deserialize)]
-    struct MisterXGame {
-        station_id: Option<u32>,
-        abilities: Abilities,
-    }
-
-    #[derive(Debug, Deserialize)]
-    struct Game {
-        players: Vec<PlayerGame>,
-        mister_x: MisterXGame,
-    }
 
     let message = assert_receive_message::<Game>(&mut mister_x, "gameState").await;
     assert!(message.is_some());
@@ -80,4 +48,5 @@ async fn correctly_starts_round() {
 
     assert_eq!(message.mister_x.abilities.double_move, 2);
     assert_eq!(message.mister_x.abilities.hidden, 2);
+    assert_eq!(message.mister_x.moves.len(), 0);
 }
