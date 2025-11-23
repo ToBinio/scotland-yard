@@ -73,7 +73,6 @@ onMounted(() => draw());
 watch([stations, connections], () => draw());
 
 function onWheel(event: WheelEvent) {
-  event.preventDefault();
   const rect = canvasRef.value!.getBoundingClientRect();
   const mouseX = event.clientX - rect.left;
   const mouseY = event.clientY - rect.top;
