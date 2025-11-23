@@ -135,7 +135,7 @@ function onStationClick(id: number) {
       width="1800"
       height="1000"
       class="border"
-      @wheel="onWheel"
+      @wheel.prevent="onWheel"
       @mousedown.prevent="onMouseDown"
       @mousemove="onMouseMove"
       @mouseup="onMouseUp"
