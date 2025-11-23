@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
-import type { Connection, Station } from "~/types/canvas";
+import type { Connection, Station } from "~/utils/type/canvas";
 
 let { data: stations } = await useFetch<Station[]>(
   "http://localhost:8080/map/stations",
@@ -137,7 +136,7 @@ function onStationClick(id: number) {
       height="1000"
       class="border"
       @wheel="onWheel"
-      @mousedown="onMouseDown"
+      @mousedown.prevent="onMouseDown"
       @mousemove="onMouseMove"
       @mouseup="onMouseUp"
       @mouseleave="onMouseUp"
