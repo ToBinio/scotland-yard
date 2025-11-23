@@ -19,7 +19,7 @@ pub async fn send_message(
 ) {
     if let Some(message) = message {
         connection
-            .send_text(format!("[{}] {}", name, message.to_string()))
+            .send_text(format!("[{}] {}", name, message))
             .await;
     } else {
         connection.send_text(format!("[{}]", name)).await;

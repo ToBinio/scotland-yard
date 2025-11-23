@@ -18,7 +18,7 @@ async fn main() {
 
     info!("listening on {}", listener.local_addr().unwrap());
 
-    axum::serve(listener, app(Arc::new(DataService::default())))
+    axum::serve(listener, app(Arc::new(DataService)))
         .await
         .unwrap();
 }

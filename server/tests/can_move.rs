@@ -11,13 +11,13 @@ use crate::common::{
 
 mod common;
 
-async fn receive_start_move_message(mut player: &mut TestWebSocket, expected_role: &str) {
+async fn receive_start_move_message(player: &mut TestWebSocket, expected_role: &str) {
     #[derive(Debug, Deserialize)]
     struct StartMove {
         role: String,
     }
 
-    let message = assert_receive_message::<StartMove>(&mut player, "startMove").await;
+    let message = assert_receive_message::<StartMove>(player, "startMove").await;
     assert_eq!(message.unwrap().role, expected_role);
 }
 

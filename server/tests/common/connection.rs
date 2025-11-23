@@ -25,8 +25,8 @@ pub async fn create_game(socket: &mut TestWebSocket) -> String {
 }
 
 pub async fn start_game(server: &mut TestServer) -> (TestWebSocket, TestWebSocket) {
-    let mut player_1 = get_ws_connection(&server).await;
-    let mut player_2 = get_ws_connection(&server).await;
+    let mut player_1 = get_ws_connection(server).await;
+    let mut player_2 = get_ws_connection(server).await;
 
     let game_id = create_game(&mut player_1).await;
 

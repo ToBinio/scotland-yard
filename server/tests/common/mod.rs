@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::sync::Arc;
 
 use axum_test::TestServer;
@@ -8,6 +10,6 @@ pub mod data;
 pub mod ws;
 
 pub fn test_server() -> TestServer {
-    let app = app(Arc::new(DataService::default()));
+    let app = app(Arc::new(DataService));
     TestServer::builder().http_transport().build(app).unwrap()
 }
