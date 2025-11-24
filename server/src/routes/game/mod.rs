@@ -161,11 +161,32 @@ impl Connection {
                     .await
                     .close_lobby(&self.lobby_id.unwrap());
 
-                self.game_service
-                    .lock()
-                    .await
-                    .start(&self.lobby_id.unwrap())
-                    .await?;
+                let mut ref_game_service = self.game_service.lock().await;
+                let game = ref_game_service.get_game_mut(&self.lobby_id.unwrap())?;
+                game.start().await;
+            }
+            ClientPacket::MoveMisterX(packet) => {
+                let mut ref_game_service = self.game_service.lock().await;
+                let game = ref_game_service.get_game_mut(&self.lobby_id.unwrap())?;
+
+                for packet in packet {
+                    game.move_mister_x(packet.station_id, packet.transport_type);
+                }
+            }
+            ClientPacket::MoveDetective(packet) => {
+                let mut ref_game_service = self.game_service.lock().await;
+                let game = ref_game_service.get_game_mut(&self.lobby_id.unwrap())?;
+
+                dbg!(&packet.color);
+
+                game.move_detective(packet.color, packet.station_id, packet.transport_type)
+                    .await;
+            }
+            ClientPacket::SubmitMove => {
+                let mut ref_game_service = self.game_service.lock().await;
+                let game = ref_game_service.get_game_mut(&self.lobby_id.unwrap())?;
+
+                game.end_move().await;
             }
         }
 

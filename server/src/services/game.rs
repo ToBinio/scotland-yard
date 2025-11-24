@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
     routes::game::packet::{
         DetectiveData, DetectiveTransportData, GameStartedPacket, GameStatePacket,
-        MisterXAbilityData, MisterXData, ServerPacket, StartMovePacket,
+        MisterXAbilityData, MisterXData, MoveType, ServerPacket, StartMovePacket,
     },
     services::{
         data::DataServiceHandle,
@@ -40,9 +40,11 @@ struct MisterX {
     station_id: u8,
     double_move: u32,
     hidden: u32,
+    moves: Vec<MoveType>,
 }
 
-struct Game {
+pub struct Game {
+    current_move: Role,
     data_service: DataServiceHandle,
 
     detective_ws: Vec<Sender<ServerPacket>>,
@@ -52,7 +54,7 @@ struct Game {
 }
 
 impl Game {
-    pub async fn start(&self) {
+    pub async fn start(&mut self) {
         self.mister_x_ws
             .send(ServerPacket::GameStarted(GameStartedPacket {
                 role: Role::MisterX,
@@ -72,7 +74,9 @@ impl Game {
         self.start_move(Role::MisterX).await;
     }
 
-    pub async fn start_move(&self, role: Role) {
+    pub async fn start_move(&mut self, role: Role) {
+        self.current_move = role.clone();
+
         let packet = StartMovePacket { role };
 
         for player in &self.detective_ws {
@@ -111,7 +115,7 @@ impl Game {
                     double_move: self.mister_x.double_move,
                     hidden: self.mister_x.hidden,
                 },
-                moves: vec![],
+                moves: self.mister_x.moves.clone(),
             },
         };
 
@@ -127,6 +131,54 @@ impl Game {
             .send(ServerPacket::GameState(packet))
             .await
             .unwrap();
+    }
+
+    async fn send_all(&self, packet: ServerPacket) {
+        for player in &self.detective_ws {
+            player.send(packet.clone()).await.unwrap();
+        }
+        self.mister_x_ws.send(packet).await.unwrap();
+    }
+
+    pub fn move_mister_x(&mut self, station_id: u8, transport_type: MoveType) {
+        self.mister_x.station_id = station_id;
+        self.mister_x.moves.push(transport_type);
+    }
+
+    pub async fn move_detective(
+        &mut self,
+        color: String,
+        station_id: u8,
+        transport_type: MoveType,
+    ) {
+        dbg!(&color);
+
+        let detective = self
+            .detectives
+            .iter_mut()
+            .find(|detective| detective.color == color)
+            .unwrap();
+
+        detective.station_id = station_id;
+        println!("Detective moved to station {}", station_id);
+
+        match transport_type {
+            MoveType::Taxi => detective.taxi -= 1,
+            MoveType::Bus => detective.bus -= 1,
+            MoveType::Underground => detective.underground -= 1,
+            MoveType::Hidden => unreachable!(),
+        };
+
+        self.send_game_state().await;
+    }
+
+    pub async fn end_move(&mut self) {
+        self.send_all(ServerPacket::EndMove).await;
+
+        match self.current_move {
+            Role::Detective => self.start_move(Role::MisterX).await,
+            Role::MisterX => self.start_move(Role::Detective).await,
+        };
     }
 }
 
@@ -188,6 +240,7 @@ impl GameService {
             .collect();
 
         let game = Game {
+            current_move: Role::Detective,
             data_service: self.data_service.clone(),
             detective_ws: detectives_ws,
             detectives,
@@ -196,6 +249,7 @@ impl GameService {
                 station_id: *starting_stations.last().unwrap(),
                 double_move: 2,
                 hidden: 2,
+                moves: Vec::new(),
             },
         };
 
@@ -204,15 +258,13 @@ impl GameService {
         Ok(())
     }
 
-    fn get_game(&self, game_id: &GameId) -> Result<&Game, GameServiceError> {
+    pub fn get_game(&self, game_id: &GameId) -> Result<&Game, GameServiceError> {
         self.games.get(game_id).ok_or(GameServiceError::UnknownGame)
     }
 
-    pub async fn start(&self, game_id: &GameId) -> Result<(), GameServiceError> {
-        let game = self.get_game(game_id)?;
-
-        game.start().await;
-
-        Ok(())
+    pub fn get_game_mut(&mut self, game_id: &GameId) -> Result<&mut Game, GameServiceError> {
+        self.games
+            .get_mut(game_id)
+            .ok_or(GameServiceError::UnknownGame)
     }
 }

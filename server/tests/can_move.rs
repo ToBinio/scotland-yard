@@ -98,6 +98,11 @@ async fn can_move() {
     )
     .await;
 
+    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut detective, "gameState")
+        .await
+        .unwrap();
+
     assert_eq!(game_state.players[2].station_id, 130);
     assert_eq!(game_state.players[2].available_transport.bus, 7);
 
@@ -107,6 +112,11 @@ async fn can_move() {
         Some(json!({ "color": colors[3], "station_id": 140, "transport_type": "underground" })),
     )
     .await;
+
+    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut detective, "gameState")
+        .await
+        .unwrap();
 
     assert_eq!(game_state.players[3].station_id, 140);
     assert_eq!(game_state.players[3].available_transport.underground, 3);

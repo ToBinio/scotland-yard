@@ -5,27 +5,27 @@ use thiserror::Error;
 
 use crate::services::{game::Role, lobby::LobbyId};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct ErrorPacket {
     pub message: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct CreateGamePacket {
     pub number_of_detectives: usize,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct GamePacket {
     pub id: LobbyId,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct JoinGamePacket {
     pub id: LobbyId,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct GameStartedPacket {
     pub role: Role,
 }
@@ -77,18 +77,36 @@ pub struct GameStatePacket {
     pub mister_x: MisterXData,
 }
 
+#[derive(Deserialize, Serialize, Clone)]
+pub struct MoveMisterXPacket {
+    pub station_id: u8,
+    pub transport_type: MoveType,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct MoveDetectivePacket {
+    pub color: String,
+    pub station_id: u8,
+    pub transport_type: MoveType,
+}
+
+#[derive(Clone)]
 pub enum ServerPacket {
     Error(ErrorPacket),
     Game(GamePacket),
     GameStarted(GameStartedPacket),
     StartMove(StartMovePacket),
     GameState(GameStatePacket),
+    EndMove,
 }
 
 pub enum ClientPacket {
     CreateGame(CreateGamePacket),
     JoinGame(JoinGamePacket),
     StartGame,
+    MoveMisterX(Vec<MoveMisterXPacket>),
+    MoveDetective(MoveDetectivePacket),
+    SubmitMove,
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -115,6 +133,7 @@ impl Display for ServerPacket {
             ServerPacket::GameState(content) => {
                 ("gameState", Some(serde_json::to_string(content).unwrap()))
             }
+            ServerPacket::EndMove => ("endMove", None),
         };
 
         if let Some(content) = content {
@@ -149,6 +168,9 @@ impl ClientPacket {
             "[createGame]" => Ok(ClientPacket::CreateGame(get_content(content)?)),
             "[joinGame]" => Ok(ClientPacket::JoinGame(get_content(content)?)),
             "[startGame]" => Ok(ClientPacket::StartGame),
+            "[moveMisterX]" => Ok(ClientPacket::MoveMisterX(get_content(content)?)),
+            "[moveDetective]" => Ok(ClientPacket::MoveDetective(get_content(content)?)),
+            "[submitMove]" => Ok(ClientPacket::SubmitMove),
             _ => Err(PacketError::UnknownPacket),
         }
     }
