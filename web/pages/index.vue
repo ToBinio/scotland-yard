@@ -125,6 +125,13 @@
 	function onStationClick(id: number) {
 		console.log("Station geklickt:", id);
 	}
+
+	const { data, send } = useGameConnection();
+
+	watch(data, (data) => {
+		console.log("new message:", data);
+	});
+	send("createGame", { number_of_detectives: 4 });
 </script>
 
 <template>
