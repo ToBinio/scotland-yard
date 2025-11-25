@@ -31,6 +31,7 @@ pub async fn receive_message<T: serde::de::DeserializeOwned>(
 ) -> (String, Option<T>) {
     let message = timeout(Duration::from_millis(500), connection.receive_text())
         .await
+        .map_err(|_| "expected ws packet but did not recieve")
         .unwrap();
     let mut split = message.splitn(2, " ");
 
@@ -67,7 +68,13 @@ pub async fn assert_receive_error(connection: &mut TestWebSocket, message: &str)
         message: String,
     }
 
-    let (received_name, response) = receive_message::<Error>(connection).await;
+    let (received_name, response) = timeout(
+        Duration::from_millis(200),
+        receive_message::<Error>(connection),
+    )
+    .await
+    .map_err(|_| format!("expected error '{}' but did not recieve", message))
+    .unwrap();
     assert_eq!(received_name, "error");
     assert_eq!(response.unwrap().message, message);
 }

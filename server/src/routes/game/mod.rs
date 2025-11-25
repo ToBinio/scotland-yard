@@ -1,3 +1,5 @@
+use std::ops::Not;
+
 use axum::{
     Router,
     extract::{
@@ -14,7 +16,7 @@ use crate::{
     AppState,
     routes::game::packet::{ClientPacket, GamePacket, ServerPacket},
     services::{
-        game::{GameServiceError, GameServiceHandle},
+        game::{Game, GameServiceError, GameServiceHandle, Role},
         lobby::{LobbyId, LobbyServiceError, LobbyServiceHandle, PlayerId},
     },
 };
@@ -104,6 +106,9 @@ pub enum ConnectionError {
 
     #[error("game already joined")]
     GameAlreadyJoined,
+
+    #[error("not your turn")]
+    NotAllowedForUser,
 }
 
 struct Connection {
@@ -119,6 +124,18 @@ struct Connection {
 impl Connection {
     async fn send(&mut self, packet: ServerPacket) {
         self.sender.send(packet).await.unwrap();
+    }
+
+    fn veryfiy_is_own_round(&self, game: &Game) -> Result<(), ConnectionError> {
+        if game
+            .get_user_role(self.player_id.unwrap())
+            .eq(game.active_role())
+            .not()
+        {
+            return Err(ConnectionError::NotAllowedForUser);
+        }
+
+        Ok(())
     }
 
     async fn handle_client_packet(&mut self, packet: ClientPacket) -> Result<(), ConnectionError> {
@@ -169,13 +186,28 @@ impl Connection {
                 let mut ref_game_service = self.game_service.lock().await;
                 let game = ref_game_service.get_game_mut(&self.lobby_id.unwrap())?;
 
-                for packet in packet {
-                    game.move_mister_x(packet.station_id, packet.transport_type);
+                self.veryfiy_is_own_round(game)?;
+
+                if matches!(game.get_user_role(self.player_id.unwrap()), Role::Detective) {
+                    return Err(ConnectionError::NotAllowedForUser);
                 }
+
+                game.move_mister_x(
+                    packet
+                        .into_iter()
+                        .map(|packet| (packet.station_id, packet.transport_type))
+                        .collect(),
+                )?;
             }
             ClientPacket::MoveDetective(packet) => {
                 let mut ref_game_service = self.game_service.lock().await;
                 let game = ref_game_service.get_game_mut(&self.lobby_id.unwrap())?;
+
+                self.veryfiy_is_own_round(game)?;
+
+                if matches!(game.get_user_role(self.player_id.unwrap()), Role::MisterX) {
+                    return Err(ConnectionError::NotAllowedForUser);
+                }
 
                 dbg!(&packet.color);
 
@@ -186,7 +218,9 @@ impl Connection {
                 let mut ref_game_service = self.game_service.lock().await;
                 let game = ref_game_service.get_game_mut(&self.lobby_id.unwrap())?;
 
-                game.end_move().await;
+                self.veryfiy_is_own_round(game)?;
+
+                game.end_move().await?;
             }
         }
 

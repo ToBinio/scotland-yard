@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tokio::sync::{Mutex, mpsc::Sender};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
     },
     services::{
         data::DataServiceHandle,
-        lobby::{Lobby, LobbyId},
+        lobby::{Lobby, LobbyId, Player, PlayerId},
     },
 };
 
@@ -21,49 +21,147 @@ pub type GameId = Uuid;
 
 pub type GameServiceHandle = Arc<Mutex<GameService>>;
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum Role {
     Detective,
     MisterX,
 }
 
+struct Move {
+    station: u8,
+    move_type: MoveType,
+}
+
 struct Detective {
     color: String,
-    station_id: u8,
-    taxi: u32,
-    bus: u32,
-    underground: u32,
+    start_station_id: u8,
+    moves: Vec<Move>,
+}
+
+impl Detective {
+    pub fn station_id(&self) -> u8 {
+        match self.moves.last() {
+            Some(step) => step.station,
+            None => self.start_station_id,
+        }
+    }
+
+    pub fn taxi(&self) -> u8 {
+        let count = self
+            .moves
+            .iter()
+            .filter(|step| matches!(step.move_type, MoveType::Taxi))
+            .count() as u8;
+
+        10 - count
+    }
+
+    pub fn bus(&self) -> u8 {
+        let count = self
+            .moves
+            .iter()
+            .filter(|step| matches!(step.move_type, MoveType::Bus))
+            .count() as u8;
+
+        8 - count
+    }
+
+    pub fn underground(&self) -> u8 {
+        let count = self
+            .moves
+            .iter()
+            .filter(|step| matches!(step.move_type, MoveType::Underground))
+            .count() as u8;
+
+        4 - count
+    }
+}
+
+enum MisterXMove {
+    Single(Move),
+    Double(Move, Move),
 }
 
 struct MisterX {
-    station_id: u8,
-    double_move: u32,
-    hidden: u32,
-    moves: Vec<MoveType>,
+    start_station_id: u8,
+    moves: Vec<MisterXMove>,
+}
+
+impl MisterX {
+    pub fn station_id(&self) -> u8 {
+        match self.moves.last() {
+            Some(step) => match step {
+                MisterXMove::Single(step) => step.station,
+                MisterXMove::Double(_, step) => step.station,
+            },
+            None => self.start_station_id,
+        }
+    }
+
+    /// Returns number of aviable hidden moves
+    pub fn hidden(&self) -> u8 {
+        let count = self
+            .flat_moves()
+            .into_iter()
+            .filter(|step| step.eq(&MoveType::Hidden))
+            .count() as u8;
+
+        2 - count
+    }
+
+    /// Returns number of aviable double moves
+    pub fn double_moves(&self) -> u8 {
+        let count = self
+            .moves
+            .iter()
+            .filter(|step| matches!(step, MisterXMove::Double(_, _)))
+            .count() as u8;
+
+        2 - count
+    }
+
+    pub fn flat_moves(&self) -> Vec<MoveType> {
+        self.moves
+            .iter()
+            .flat_map(|step| match step {
+                MisterXMove::Single(step) => vec![step.move_type.clone()],
+                MisterXMove::Double(step1, step2) => {
+                    vec![step1.move_type.clone(), step2.move_type.clone()]
+                }
+            })
+            .collect()
+    }
 }
 
 pub struct Game {
-    current_move: Role,
+    active_role: Role,
+    game_round: u8,
     data_service: DataServiceHandle,
 
-    detective_ws: Vec<Sender<ServerPacket>>,
+    detective_players: Vec<Player>,
     detectives: Vec<Detective>,
-    mister_x_ws: Sender<ServerPacket>,
+    mister_x_player: Player,
     mister_x: MisterX,
 }
 
 impl Game {
+    pub fn active_role(&self) -> &Role {
+        &self.active_role
+    }
+
     pub async fn start(&mut self) {
-        self.mister_x_ws
+        self.mister_x_player
+            .ws_sender
             .send(ServerPacket::GameStarted(GameStartedPacket {
                 role: Role::MisterX,
             }))
             .await
             .unwrap();
 
-        for player in &self.detective_ws {
+        for player in &self.detective_players {
             player
+                .ws_sender
                 .send(ServerPacket::GameStarted(GameStartedPacket {
                     role: Role::Detective,
                 }))
@@ -75,18 +173,20 @@ impl Game {
     }
 
     pub async fn start_move(&mut self, role: Role) {
-        self.current_move = role.clone();
+        self.active_role = role.clone();
 
         let packet = StartMovePacket { role };
 
-        for player in &self.detective_ws {
+        for player in &self.detective_players {
             player
+                .ws_sender
                 .send(ServerPacket::StartMove(packet.clone()))
                 .await
                 .unwrap();
         }
 
-        self.mister_x_ws
+        self.mister_x_player
+            .ws_sender
             .send(ServerPacket::StartMove(packet))
             .await
             .unwrap();
@@ -101,48 +201,85 @@ impl Game {
                 .iter()
                 .map(|data| DetectiveData {
                     color: data.color.clone(),
-                    station_id: data.station_id,
+                    station_id: data.station_id(),
                     available_transport: DetectiveTransportData {
-                        taxi: data.taxi,
-                        bus: data.bus,
-                        underground: data.underground,
+                        taxi: data.taxi(),
+                        bus: data.bus(),
+                        underground: data.underground(),
                     },
                 })
                 .collect(),
             mister_x: MisterXData {
                 station_id: None,
                 abilities: MisterXAbilityData {
-                    double_move: self.mister_x.double_move,
-                    hidden: self.mister_x.hidden,
+                    double_move: self.mister_x.double_moves(),
+                    hidden: self.mister_x.hidden(),
                 },
-                moves: self.mister_x.moves.clone(),
+                moves: self.mister_x.flat_moves(),
             },
         };
 
-        for player in &self.detective_ws {
+        for player in &self.detective_players {
             player
+                .ws_sender
                 .send(ServerPacket::GameState(packet.clone()))
                 .await
                 .unwrap();
         }
 
-        packet.mister_x.station_id = Some(self.mister_x.station_id);
-        self.mister_x_ws
+        packet.mister_x.station_id = Some(self.mister_x.station_id());
+        self.mister_x_player
+            .ws_sender
             .send(ServerPacket::GameState(packet))
             .await
             .unwrap();
     }
 
     async fn send_all(&self, packet: ServerPacket) {
-        for player in &self.detective_ws {
-            player.send(packet.clone()).await.unwrap();
+        for player in &self.detective_players {
+            player.ws_sender.send(packet.clone()).await.unwrap();
         }
-        self.mister_x_ws.send(packet).await.unwrap();
+        self.mister_x_player.ws_sender.send(packet).await.unwrap();
     }
 
-    pub fn move_mister_x(&mut self, station_id: u8, transport_type: MoveType) {
-        self.mister_x.station_id = station_id;
-        self.mister_x.moves.push(transport_type);
+    pub fn move_mister_x(&mut self, moves: Vec<(u8, MoveType)>) -> Result<(), GameServiceError> {
+        if moves.len() > 2 {
+            return Err(GameServiceError::InvalidMove);
+        }
+
+        if self.mister_x.moves.len() as u8 > self.game_round {
+            self.mister_x.moves.pop();
+        }
+
+        let (first, second) = (moves.first(), moves.get(1));
+
+        match (first, second) {
+            (Some(first), None) => {
+                self.mister_x.moves.push(MisterXMove::Single(Move {
+                    station: first.0,
+                    move_type: first.1.clone(),
+                }));
+            }
+            (Some(first), Some(second)) => {
+                if self.mister_x.double_moves() == 0 {
+                    return Err(GameServiceError::InvalidMove);
+                }
+
+                self.mister_x.moves.push(MisterXMove::Double(
+                    Move {
+                        station: first.0,
+                        move_type: first.1.clone(),
+                    },
+                    Move {
+                        station: second.0,
+                        move_type: second.1.clone(),
+                    },
+                ));
+            }
+            _ => return Err(GameServiceError::InvalidMove),
+        }
+
+        Ok(())
     }
 
     pub async fn move_detective(
@@ -159,26 +296,53 @@ impl Game {
             .find(|detective| detective.color == color)
             .unwrap();
 
-        detective.station_id = station_id;
-        println!("Detective moved to station {}", station_id);
+        if detective.moves.len() as u8 > self.game_round {
+            detective.moves.pop();
+        }
 
-        match transport_type {
-            MoveType::Taxi => detective.taxi -= 1,
-            MoveType::Bus => detective.bus -= 1,
-            MoveType::Underground => detective.underground -= 1,
-            MoveType::Hidden => unreachable!(),
-        };
+        detective.moves.push(Move {
+            station: station_id,
+            move_type: transport_type,
+        });
 
         self.send_game_state().await;
     }
 
-    pub async fn end_move(&mut self) {
+    pub async fn end_move(&mut self) -> Result<(), GameServiceError> {
+        match self.active_role {
+            Role::Detective => {
+                for detective in &self.detectives {
+                    if detective.moves.len() as u8 <= self.game_round {
+                        return Err(GameServiceError::NotAllMoved);
+                    }
+                }
+            }
+            Role::MisterX => {
+                if self.mister_x.moves.len() as u8 <= self.game_round {
+                    return Err(GameServiceError::NotAllMoved);
+                }
+            }
+        };
+
         self.send_all(ServerPacket::EndMove).await;
 
-        match self.current_move {
-            Role::Detective => self.start_move(Role::MisterX).await,
+        match self.active_role {
+            Role::Detective => {
+                self.game_round += 1;
+                self.start_move(Role::MisterX).await
+            }
             Role::MisterX => self.start_move(Role::Detective).await,
         };
+
+        Ok(())
+    }
+
+    pub fn get_user_role(&self, id: PlayerId) -> Role {
+        if self.mister_x_player.uuid == id {
+            Role::MisterX
+        } else {
+            Role::Detective
+        }
     }
 }
 
@@ -188,6 +352,10 @@ pub enum GameServiceError {
     UnknownGame,
     #[error("game does not have enough players")]
     NotEnoughPlayers,
+    #[error("invalid move")]
+    InvalidMove,
+    #[error("not all moved")]
+    NotAllMoved,
 }
 
 pub struct GameService {
@@ -224,31 +392,28 @@ impl GameService {
         let detectives = (0..lobby.settings.number_of_detectives)
             .map(|i| Detective {
                 color: colors[i].to_string(),
-                station_id: starting_stations[i],
-                taxi: 10,
-                bus: 8,
-                underground: 4,
+                start_station_id: starting_stations[i],
+                moves: vec![],
             })
             .collect();
 
-        let detectives_ws = lobby
+        let detective_players = lobby
             .players
             .iter()
             .enumerate()
             .filter(|(index, _)| *index != mister_x)
-            .map(|(_, player)| player.ws_sender.clone())
+            .map(|(_, player)| player.clone())
             .collect();
 
         let game = Game {
-            current_move: Role::Detective,
+            game_round: 0,
+            active_role: Role::Detective,
             data_service: self.data_service.clone(),
-            detective_ws: detectives_ws,
+            detective_players,
             detectives,
-            mister_x_ws: lobby.players[mister_x].ws_sender.clone(),
+            mister_x_player: lobby.players[mister_x].clone(),
             mister_x: MisterX {
-                station_id: *starting_stations.last().unwrap(),
-                double_move: 2,
-                hidden: 2,
+                start_station_id: *starting_stations.last().unwrap(),
                 moves: Vec::new(),
             },
         };

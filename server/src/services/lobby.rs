@@ -10,6 +10,7 @@ pub struct Settings {
     pub number_of_detectives: usize,
 }
 
+#[derive(Clone)]
 pub struct Player {
     pub uuid: Uuid,
     pub ws_sender: Sender<ServerPacket>,

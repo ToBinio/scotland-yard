@@ -44,12 +44,12 @@ pub struct DetectiveData {
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct DetectiveTransportData {
-    pub taxi: u32,
-    pub bus: u32,
-    pub underground: u32,
+    pub taxi: u8,
+    pub bus: u8,
+    pub underground: u8,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum MoveType {
     Taxi,
@@ -67,8 +67,8 @@ pub struct MisterXData {
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MisterXAbilityData {
-    pub double_move: u32,
-    pub hidden: u32,
+    pub double_move: u8,
+    pub hidden: u8,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

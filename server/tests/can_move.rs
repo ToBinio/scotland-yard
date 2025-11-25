@@ -144,7 +144,16 @@ async fn non_active_can_not_send_or_submit_move() {
     )
     .await;
 
-    assert_receive_error(&mut detective, "not misterX").await;
+    assert_receive_error(&mut detective, "not your turn").await;
+
+    send_message(
+        &mut detective,
+        "moveDetective",
+        Some(json!({ "color": colors[0], "station_id": 110, "transport_type": "taxi" })),
+    )
+    .await;
+
+    assert_receive_error(&mut detective, "not your turn").await;
 
     send_message(
         &mut mister_x,
@@ -154,7 +163,7 @@ async fn non_active_can_not_send_or_submit_move() {
     .await;
 
     send_message(&mut detective, "submitMove", None).await;
-    assert_receive_error(&mut detective, "not misterX").await;
+    assert_receive_error(&mut detective, "not your turn").await;
 
     send_message(&mut mister_x, "submitMove", None).await;
 
@@ -173,7 +182,16 @@ async fn non_active_can_not_send_or_submit_move() {
         Some(json!({ "color": colors[0], "station_id": 110, "transport_type": "taxi" })),
     )
     .await;
-    assert_receive_error(&mut mister_x, "not a detective").await;
+    assert_receive_error(&mut mister_x, "not your turn").await;
+
+    send_message(
+        &mut mister_x,
+        "moveMisterX",
+        Some(json!([{ "station_id": 100, "transport_type": "taxi" }])),
+    )
+    .await;
+
+    assert_receive_error(&mut mister_x, "not your turn").await;
 
     let _ = send_detective_move(
         &mut mister_x,
@@ -204,7 +222,7 @@ async fn non_active_can_not_send_or_submit_move() {
     .await;
 
     send_message(&mut mister_x, "submitMove", None).await;
-    assert_receive_error(&mut mister_x, "not a detective").await;
+    assert_receive_error(&mut mister_x, "not your turn").await;
 
     send_message(&mut detective, "submitMove", None).await;
 
