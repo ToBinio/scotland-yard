@@ -79,6 +79,7 @@ impl GameService {
             detectives,
             lobby.players[mister_x].clone(),
             MisterX::new(*starting_stations.last().unwrap()),
+            self.data_service.clone(),
         );
 
         self.games.insert(*lobby_id, game);

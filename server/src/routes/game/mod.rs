@@ -224,7 +224,7 @@ impl Connection {
                 self.is_mister_x(game)?;
 
                 game.move_detective(packet.color, packet.station_id, packet.transport_type)
-                    .await;
+                    .await?;
             }
             ClientPacket::SubmitMove => {
                 let mut ref_game_service = self.game_service.lock().await;

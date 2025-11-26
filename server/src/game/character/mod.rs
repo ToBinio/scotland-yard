@@ -1,9 +1,11 @@
+use crate::services::data::StationType;
+
 pub mod detective;
 pub mod mister_x;
 
 pub trait Character {
     type Action;
-    type ActionType;
+    type ActionType: ActionTypeTrait;
 
     fn station_id(&self) -> u8;
 
@@ -15,4 +17,8 @@ pub trait Character {
     fn add_action(&mut self, action: Self::Action);
 
     fn actions(&self) -> &Vec<Self::Action>;
+}
+
+pub trait ActionTypeTrait {
+    fn matches(&self, station_type: &StationType) -> bool;
 }

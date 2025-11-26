@@ -6,15 +6,15 @@ pub mod service;
 
 #[derive(Serialize, Clone)]
 pub struct Round {
-    index: u8,
-    show_mister_x: bool,
+    pub index: u8,
+    pub show_mister_x: bool,
 }
 
 #[derive(Serialize, Clone)]
 pub struct Connection {
-    from: u8,
-    to: u8,
-    mode: StationType,
+    pub from: u8,
+    pub to: u8,
+    pub mode: StationType,
 }
 
 #[derive(Serialize, Clone)]
@@ -28,10 +28,10 @@ pub enum StationType {
 
 #[derive(Serialize, Clone)]
 pub struct Station {
-    id: u8,
-    pos_x: u32,
-    pos_y: u32,
-    types: Vec<StationType>,
+    pub id: u8,
+    pub pos_x: u32,
+    pub pos_y: u32,
+    pub types: Vec<StationType>,
 }
 
 pub type DataServiceHandle = Arc<dyn DataServiceTrait>;

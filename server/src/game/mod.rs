@@ -1,9 +1,11 @@
+use std::ops::Not;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
     game::character::{
-        Character,
+        ActionTypeTrait, Character,
         detective::{self, Detective},
         mister_x::{self, MisterX},
     },
@@ -11,7 +13,10 @@ use crate::{
         DetectiveData, DetectiveTransportData, GameStartedPacket, GameStatePacket,
         MisterXAbilityData, MisterXData, ServerPacket, StartMovePacket,
     },
-    services::lobby::{Player, PlayerId},
+    services::{
+        data::DataServiceHandle,
+        lobby::{Player, PlayerId},
+    },
 };
 
 pub mod character;
@@ -35,6 +40,8 @@ pub struct Game {
     active_role: Role,
     game_round: u8,
 
+    data_service: DataServiceHandle,
+
     detective_players: Vec<Player>,
     detectives: Vec<Detective>,
     mister_x_player: Player,
@@ -47,6 +54,7 @@ impl Game {
         detectives: Vec<Detective>,
         mister_x_player: Player,
         mister_x: MisterX,
+        data_service: DataServiceHandle,
     ) -> Game {
         Game {
             active_role: Role::MisterX,
@@ -55,6 +63,7 @@ impl Game {
             detectives,
             mister_x_player,
             mister_x,
+            data_service,
         }
     }
 
@@ -168,6 +177,13 @@ impl Game {
 
         match (first, second) {
             (Some(first), None) => {
+                if self
+                    .has_connection(self.mister_x.station_id(), first.0, &first.1)
+                    .not()
+                {
+                    return Err(GameError::InvalidMove);
+                }
+
                 self.mister_x
                     .add_action(mister_x::Action::Single(mister_x::MoveData {
                         station: first.0,
@@ -176,6 +192,14 @@ impl Game {
             }
             (Some(first), Some(second)) => {
                 if self.mister_x.double_moves() == 0 {
+                    return Err(GameError::InvalidMove);
+                }
+
+                if self
+                    .has_connection(self.mister_x.station_id(), first.0, &first.1)
+                    .not()
+                    || self.has_connection(first.0, second.0, &second.1).not()
+                {
                     return Err(GameError::InvalidMove);
                 }
 
@@ -201,9 +225,7 @@ impl Game {
         color: String,
         station_id: u8,
         transport_type: detective::ActionType,
-    ) {
-        dbg!(&color);
-
+    ) -> Result<(), GameError> {
         let detective = self
             .detectives
             .iter_mut()
@@ -212,12 +234,29 @@ impl Game {
 
         detective.trim_actions(self.game_round as usize);
 
+        let detective_station = detective.station_id();
+
+        if self
+            .has_connection(detective_station, station_id, &transport_type)
+            .not()
+        {
+            return Err(GameError::InvalidMove);
+        }
+
+        let detective = self
+            .detectives
+            .iter_mut()
+            .find(|detective| detective.color() == color)
+            .unwrap();
+
         detective.add_action(detective::Action {
             station: station_id,
             action_type: transport_type,
         });
 
         self.send_game_state().await;
+
+        Ok(())
     }
 
     pub async fn end_move(&mut self) -> Result<(), GameError> {
@@ -255,5 +294,21 @@ impl Game {
         } else {
             Role::Detective
         }
+    }
+
+    fn has_connection(&self, from: u8, to: u8, action_type: &dyn ActionTypeTrait) -> bool {
+        let connections = self.data_service.get_all_connections();
+
+        let connection = connections
+            .iter()
+            .filter(|connection| {
+                (connection.from == from && connection.to == to)
+                    || (connection.from == to && connection.to == from)
+            })
+            .any(|connection| action_type.matches(&connection.mode));
+
+        dbg!(connection);
+
+        connection
     }
 }

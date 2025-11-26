@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::game::character::Character;
+use crate::{
+    game::character::{ActionTypeTrait, Character},
+    services::data::StationType,
+};
 
 pub struct MoveData {
     pub station: u8,
@@ -19,6 +22,21 @@ pub enum ActionType {
     Bus,
     Underground,
     Hidden,
+}
+
+impl ActionTypeTrait for ActionType {
+    fn matches(&self, station_type: &StationType) -> bool {
+        if matches!(self, ActionType::Hidden) {
+            return true;
+        }
+
+        match station_type {
+            StationType::Taxi => matches!(self, ActionType::Taxi),
+            StationType::Bus => matches!(self, ActionType::Bus),
+            StationType::Underground => matches!(self, ActionType::Underground),
+            StationType::Water => matches!(self, ActionType::Hidden),
+        }
+    }
 }
 
 pub struct MisterX {

@@ -1,4 +1,4 @@
-use crate::common::test_server;
+use crate::common::test_prod_server;
 use serde::Deserialize;
 
 mod common;
@@ -21,7 +21,7 @@ struct Connection {
 
 #[tokio::test]
 async fn get_connections() {
-    let server = test_server();
+    let server = test_prod_server();
 
     let response = server.get("/map/connections").await;
 
