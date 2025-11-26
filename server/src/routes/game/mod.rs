@@ -14,9 +14,10 @@ use tokio::sync::mpsc::{self, Sender};
 
 use crate::{
     AppState,
+    game::{Game, GameError, Role},
     routes::game::packet::{ClientPacket, GamePacket, ServerPacket},
     services::{
-        game::{Game, GameServiceError, GameServiceHandle, Role},
+        game::{GameServiceError, GameServiceHandle},
         lobby::{LobbyId, LobbyServiceError, LobbyServiceHandle, PlayerId},
     },
 };
@@ -102,7 +103,10 @@ pub enum ConnectionError {
     Lobby(#[from] LobbyServiceError),
 
     #[error(transparent)]
-    Game(#[from] GameServiceError),
+    GameService(#[from] GameServiceError),
+
+    #[error(transparent)]
+    Game(#[from] GameError),
 
     #[error("game already joined")]
     GameAlreadyJoined,
@@ -126,12 +130,28 @@ impl Connection {
         self.sender.send(packet).await.unwrap();
     }
 
-    fn veryfiy_is_own_round(&self, game: &Game) -> Result<(), ConnectionError> {
+    fn is_own_round(&self, game: &Game) -> Result<(), ConnectionError> {
         if game
             .get_user_role(self.player_id.unwrap())
             .eq(game.active_role())
             .not()
         {
+            return Err(ConnectionError::NotAllowedForUser);
+        }
+
+        Ok(())
+    }
+
+    fn is_detective(&self, game: &Game) -> Result<(), ConnectionError> {
+        if matches!(game.get_user_role(self.player_id.unwrap()), Role::Detective) {
+            return Err(ConnectionError::NotAllowedForUser);
+        }
+
+        Ok(())
+    }
+
+    fn is_mister_x(&self, game: &Game) -> Result<(), ConnectionError> {
+        if matches!(game.get_user_role(self.player_id.unwrap()), Role::MisterX) {
             return Err(ConnectionError::NotAllowedForUser);
         }
 
@@ -186,11 +206,8 @@ impl Connection {
                 let mut ref_game_service = self.game_service.lock().await;
                 let game = ref_game_service.get_game_mut(&self.lobby_id.unwrap())?;
 
-                self.veryfiy_is_own_round(game)?;
-
-                if matches!(game.get_user_role(self.player_id.unwrap()), Role::Detective) {
-                    return Err(ConnectionError::NotAllowedForUser);
-                }
+                self.is_own_round(game)?;
+                self.is_detective(game)?;
 
                 game.move_mister_x(
                     packet
@@ -203,13 +220,8 @@ impl Connection {
                 let mut ref_game_service = self.game_service.lock().await;
                 let game = ref_game_service.get_game_mut(&self.lobby_id.unwrap())?;
 
-                self.veryfiy_is_own_round(game)?;
-
-                if matches!(game.get_user_role(self.player_id.unwrap()), Role::MisterX) {
-                    return Err(ConnectionError::NotAllowedForUser);
-                }
-
-                dbg!(&packet.color);
+                self.is_own_round(game)?;
+                self.is_mister_x(game)?;
 
                 game.move_detective(packet.color, packet.station_id, packet.transport_type)
                     .await;
@@ -218,7 +230,7 @@ impl Connection {
                 let mut ref_game_service = self.game_service.lock().await;
                 let game = ref_game_service.get_game_mut(&self.lobby_id.unwrap())?;
 
-                self.veryfiy_is_own_round(game)?;
+                self.is_own_round(game)?;
 
                 game.end_move().await?;
             }

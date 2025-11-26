@@ -3,7 +3,13 @@ use std::{error::Error, fmt::Display};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use thiserror::Error;
 
-use crate::services::{game::Role, lobby::LobbyId};
+use crate::{
+    game::{
+        Role,
+        character::{detective, mister_x},
+    },
+    services::lobby::LobbyId,
+};
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ErrorPacket {
@@ -49,20 +55,11 @@ pub struct DetectiveTransportData {
     pub underground: u8,
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum MoveType {
-    Taxi,
-    Bus,
-    Underground,
-    Hidden,
-}
-
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MisterXData {
     pub station_id: Option<u8>,
     pub abilities: MisterXAbilityData,
-    pub moves: Vec<MoveType>,
+    pub moves: Vec<mister_x::ActionType>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -80,14 +77,14 @@ pub struct GameStatePacket {
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MoveMisterXPacket {
     pub station_id: u8,
-    pub transport_type: MoveType,
+    pub transport_type: mister_x::ActionType,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MoveDetectivePacket {
     pub color: String,
     pub station_id: u8,
-    pub transport_type: MoveType,
+    pub transport_type: detective::ActionType,
 }
 
 #[derive(Clone)]

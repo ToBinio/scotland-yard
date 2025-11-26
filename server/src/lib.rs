@@ -22,6 +22,7 @@ use crate::services::{
     lobby::{LobbyService, LobbyServiceHandle},
 };
 
+pub mod game;
 mod routes;
 pub mod services;
 
