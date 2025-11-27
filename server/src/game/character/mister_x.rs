@@ -85,6 +85,15 @@ impl Character for MisterX {
     fn actions(&self) -> &Vec<Self::Action> {
         &self.actions
     }
+
+    fn can_do_action(&self, action: &Self::ActionType) -> bool {
+        match action {
+            ActionType::Taxi => true,
+            ActionType::Bus => true,
+            ActionType::Underground => true,
+            ActionType::Hidden => self.hidden() > 0,
+        }
+    }
 }
 
 impl MisterX {

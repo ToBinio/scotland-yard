@@ -124,4 +124,58 @@ impl GameConnection {
             .await
             .unwrap()
     }
+
+    pub async fn full_move_detectives(&mut self, colors: &Vec<String>, stations: &[u8; 4]) -> Game {
+        #[derive(Debug, Deserialize)]
+        struct EndMove;
+
+        let _ = self
+            .send_detective_move(&colors[0], stations[0], "taxi")
+            .await;
+        let _ = self
+            .send_detective_move(&colors[1], stations[1], "bus")
+            .await;
+        let _ = self
+            .send_detective_move(&colors[2], stations[2], "bus")
+            .await;
+        let _ = self
+            .send_detective_move(&colors[3], stations[3], "underground")
+            .await;
+
+        send_message(&mut self.detective, "submitMove", None).await;
+
+        assert_receive_message::<EndMove>(&mut self.mister_x, "endMove").await;
+        assert_receive_message::<EndMove>(&mut self.detective, "endMove").await;
+
+        self.receive_start_move_message("mister_x").await;
+
+        assert_receive_message::<Game>(&mut self.mister_x, "gameState").await;
+        assert_receive_message::<Game>(&mut self.detective, "gameState")
+            .await
+            .unwrap()
+    }
+
+    pub async fn full_move_mister_x(&mut self, station: u32) -> Game {
+        #[derive(Debug, Deserialize)]
+        struct EndMove;
+
+        send_message(
+            &mut self.mister_x,
+            "moveMisterX",
+            Some(json!([{ "station_id": station, "transport_type": "taxi" }])),
+        )
+        .await;
+
+        send_message(&mut self.mister_x, "submitMove", None).await;
+
+        assert_receive_message::<EndMove>(&mut self.mister_x, "endMove").await;
+        assert_receive_message::<EndMove>(&mut self.detective, "endMove").await;
+
+        self.receive_start_move_message("detective").await;
+
+        assert_receive_message::<Game>(&mut self.mister_x, "gameState").await;
+        assert_receive_message::<Game>(&mut self.detective, "gameState")
+            .await
+            .unwrap()
+    }
 }

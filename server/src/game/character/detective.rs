@@ -67,6 +67,14 @@ impl Character for Detective {
     fn actions(&self) -> &Vec<Self::Action> {
         &self.actions
     }
+
+    fn can_do_action(&self, action: &Self::ActionType) -> bool {
+        match action {
+            ActionType::Taxi => self.taxi() > 0,
+            ActionType::Bus => self.bus() > 0,
+            ActionType::Underground => self.underground() > 0,
+        }
+    }
 }
 
 impl Detective {

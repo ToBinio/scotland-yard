@@ -131,7 +131,7 @@ impl Game {
                 })
                 .collect(),
             mister_x: MisterXData {
-                station_id: None,
+                station_id: Some(self.mister_x.station_id()),
                 abilities: MisterXAbilityData {
                     double_move: self.mister_x.double_moves(),
                     hidden: self.mister_x.hidden(),
@@ -140,6 +140,22 @@ impl Game {
             },
         };
 
+        self.mister_x_player
+            .ws_sender
+            .send(ServerPacket::GameState(packet.clone()))
+            .await
+            .unwrap();
+
+        if let Some(round) = self
+            .data_service
+            .get_all_rounds()
+            .get(self.game_round as usize)
+        {
+            if round.show_mister_x.not() {
+                packet.mister_x.station_id = None;
+            }
+        }
+
         for player in &self.detective_players {
             player
                 .ws_sender
@@ -147,13 +163,6 @@ impl Game {
                 .await
                 .unwrap();
         }
-
-        packet.mister_x.station_id = Some(self.mister_x.station_id());
-        self.mister_x_player
-            .ws_sender
-            .send(ServerPacket::GameState(packet))
-            .await
-            .unwrap();
     }
 
     async fn send_all(&self, packet: ServerPacket) {
@@ -177,6 +186,10 @@ impl Game {
 
         match (first, second) {
             (Some(first), None) => {
+                if !self.mister_x.can_do_action(&first.1) {
+                    return Err(GameError::InvalidMove);
+                }
+
                 if self
                     .has_connection(self.mister_x.station_id(), first.0, &first.1)
                     .not()
@@ -191,6 +204,11 @@ impl Game {
                     }));
             }
             (Some(first), Some(second)) => {
+                if !self.mister_x.can_do_action(&first.1) || !self.mister_x.can_do_action(&second.1)
+                {
+                    return Err(GameError::InvalidMove);
+                }
+
                 if self.mister_x.double_moves() == 0 {
                     return Err(GameError::InvalidMove);
                 }
@@ -234,8 +252,11 @@ impl Game {
 
         detective.trim_actions(self.game_round as usize);
 
-        let detective_station = detective.station_id();
+        if !detective.can_do_action(&transport_type) {
+            return Err(GameError::InvalidMove);
+        }
 
+        let detective_station = detective.station_id();
         if self
             .has_connection(detective_station, station_id, &transport_type)
             .not()

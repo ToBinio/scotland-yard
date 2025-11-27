@@ -9,6 +9,8 @@ pub trait Character {
 
     fn station_id(&self) -> u8;
 
+    fn can_do_action(&self, action: &Self::ActionType) -> bool;
+
     fn action_types(&self) -> Vec<Self::ActionType>;
 
     /// trim number of actions so they are no longer than "target"
