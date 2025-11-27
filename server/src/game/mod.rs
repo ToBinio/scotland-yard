@@ -307,8 +307,6 @@ impl Game {
             })
             .any(|connection| action_type.matches(&connection.mode));
 
-        dbg!(connection);
-
         connection
     }
 }

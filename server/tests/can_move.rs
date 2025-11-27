@@ -1,4 +1,3 @@
-use axum_test::TestWebSocket;
 use serde::Deserialize;
 use serde_json::json;
 
@@ -14,39 +13,15 @@ mod common;
 #[derive(Debug, Deserialize)]
 struct EndMove;
 
-async fn receive_start_move_message(player: &mut TestWebSocket, expected_role: &str) {
-    #[derive(Debug, Deserialize)]
-    struct StartMove {
-        role: String,
-    }
-
-    let message = assert_receive_message::<StartMove>(player, "startMove").await;
-    assert_eq!(message.unwrap().role, expected_role);
-}
-
-async fn send_detective_move(
-    mister_x: &mut TestWebSocket,
-    detective: &mut TestWebSocket,
-    message: serde_json::Value,
-) -> Game {
-    send_message(detective, "moveDetective", Some(message)).await;
-
-    assert_receive_message::<Game>(mister_x, "gameState").await;
-    assert_receive_message::<Game>(detective, "gameState")
-        .await
-        .unwrap()
-}
-
 #[tokio::test]
 async fn can_move() {
     let mut server = test_server();
-    let (mut mister_x, mut detective) = start_game(&mut server).await;
+    let mut game = start_game(&mut server).await;
 
-    receive_start_move_message(&mut mister_x, "mister_x").await;
-    receive_start_move_message(&mut detective, "mister_x").await;
+    game.receive_start_move_message("mister_x").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
     let colors: Vec<_> = game_state
         .unwrap()
         .players
@@ -55,81 +30,61 @@ async fn can_move() {
         .collect();
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveMisterX",
         Some(json!([{ "station_id": 110, "transport_type": "taxi" }])),
     )
     .await;
 
-    send_message(&mut mister_x, "submitMove", None).await;
+    send_message(&mut game.mister_x, "submitMove", None).await;
 
-    assert_receive_message::<EndMove>(&mut mister_x, "endMove").await;
-    assert_receive_message::<EndMove>(&mut detective, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.mister_x, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.detective, "endMove").await;
 
-    receive_start_move_message(&mut mister_x, "detective").await;
-    receive_start_move_message(&mut detective, "detective").await;
+    game.receive_start_move_message("detective").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
 
     assert_eq!(game_state.unwrap().mister_x.moves, vec![Move::Taxi]);
 
-    let game_state = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[0], "station_id": 106, "transport_type": "taxi" }),
-    )
-    .await;
+    let game_state = game.send_detective_move(&colors[0], 106, "taxi").await;
 
     assert_eq!(game_state.players[0].station_id, 106);
     assert_eq!(game_state.players[0].available_transport.taxi, 9);
 
-    let game_state = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[1], "station_id": 107, "transport_type": "bus" }),
-    )
-    .await;
+    let game_state = game.send_detective_move(&colors[1], 107, "bus").await;
 
     assert_eq!(game_state.players[1].station_id, 107);
     assert_eq!(game_state.players[1].available_transport.bus, 7);
 
-    let game_state = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[2], "station_id": 108, "transport_type": "bus" }),
-    )
-    .await;
+    let game_state = game.send_detective_move(&colors[2], 108, "bus").await;
 
     assert_eq!(game_state.players[2].station_id, 108);
     assert_eq!(game_state.players[2].available_transport.bus, 7);
 
-    let game_state = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[3], "station_id": 109, "transport_type": "underground" }),
-    )
-    .await;
+    let game_state = game
+        .send_detective_move(&colors[3], 109, "underground")
+        .await;
 
     assert_eq!(game_state.players[3].station_id, 109);
     assert_eq!(game_state.players[3].available_transport.underground, 3);
 
-    send_message(&mut detective, "submitMove", None).await;
+    send_message(&mut game.detective, "submitMove", None).await;
 
-    assert_receive_message::<EndMove>(&mut mister_x, "endMove").await;
-    assert_receive_message::<EndMove>(&mut detective, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.mister_x, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.detective, "endMove").await;
 }
 
 #[tokio::test]
 async fn non_active_can_not_send_or_submit_move() {
     let mut server = test_server();
-    let (mut mister_x, mut detective) = start_game(&mut server).await;
+    let mut game = start_game(&mut server).await;
 
-    receive_start_move_message(&mut mister_x, "mister_x").await;
-    receive_start_move_message(&mut detective, "mister_x").await;
+    game.receive_start_move_message("mister_x").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
     let colors: Vec<_> = game_state
         .unwrap()
         .players
@@ -138,108 +93,85 @@ async fn non_active_can_not_send_or_submit_move() {
         .collect();
 
     send_message(
-        &mut detective,
+        &mut game.detective,
         "moveMisterX",
         Some(json!([{ "station_id": 110, "transport_type": "taxi" }])),
     )
     .await;
 
-    assert_receive_error(&mut detective, "not your turn").await;
+    assert_receive_error(&mut game.detective, "not your turn").await;
 
     send_message(
-        &mut detective,
+        &mut game.detective,
         "moveDetective",
         Some(json!({ "color": colors[0], "station_id": 106, "transport_type": "taxi" })),
     )
     .await;
 
-    assert_receive_error(&mut detective, "not your turn").await;
+    assert_receive_error(&mut game.detective, "not your turn").await;
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveMisterX",
         Some(json!([{ "station_id": 110, "transport_type": "taxi" }])),
     )
     .await;
 
-    send_message(&mut detective, "submitMove", None).await;
-    assert_receive_error(&mut detective, "not your turn").await;
+    send_message(&mut game.detective, "submitMove", None).await;
+    assert_receive_error(&mut game.detective, "not your turn").await;
 
-    send_message(&mut mister_x, "submitMove", None).await;
+    send_message(&mut game.mister_x, "submitMove", None).await;
 
-    assert_receive_message::<EndMove>(&mut mister_x, "endMove").await;
-    assert_receive_message::<EndMove>(&mut detective, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.mister_x, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.detective, "endMove").await;
 
-    receive_start_move_message(&mut mister_x, "detective").await;
-    receive_start_move_message(&mut detective, "detective").await;
+    game.receive_start_move_message("detective").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    assert_receive_message::<Game>(&mut game.detective, "gameState").await;
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveDetective",
         Some(json!({ "color": colors[0], "station_id": 106, "transport_type": "taxi" })),
     )
     .await;
-    assert_receive_error(&mut mister_x, "not your turn").await;
+    assert_receive_error(&mut game.mister_x, "not your turn").await;
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveMisterX",
         Some(json!([{ "station_id": 110, "transport_type": "taxi" }])),
     )
     .await;
 
-    assert_receive_error(&mut mister_x, "not your turn").await;
+    assert_receive_error(&mut game.mister_x, "not your turn").await;
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[0], "station_id": 106, "transport_type": "taxi" }),
-    )
-    .await;
+    let _ = game.send_detective_move(&colors[0], 106, "taxi").await;
+    let _ = game.send_detective_move(&colors[1], 107, "bus").await;
+    let _ = game.send_detective_move(&colors[2], 108, "bus").await;
+    let _ = game
+        .send_detective_move(&colors[3], 109, "underground")
+        .await;
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[1], "station_id": 107, "transport_type": "bus" }),
-    )
-    .await;
+    send_message(&mut game.mister_x, "submitMove", None).await;
+    assert_receive_error(&mut game.mister_x, "not your turn").await;
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[2], "station_id": 108, "transport_type": "bus" }),
-    )
-    .await;
+    send_message(&mut game.detective, "submitMove", None).await;
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[3], "station_id": 109, "transport_type": "underground" }),
-    )
-    .await;
-
-    send_message(&mut mister_x, "submitMove", None).await;
-    assert_receive_error(&mut mister_x, "not your turn").await;
-
-    send_message(&mut detective, "submitMove", None).await;
-
-    assert_receive_message::<EndMove>(&mut mister_x, "endMove").await;
-    assert_receive_message::<EndMove>(&mut detective, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.mister_x, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.detective, "endMove").await;
 }
 
 #[tokio::test]
 async fn can_only_submit_if_all_moved() {
     let mut server = test_server();
-    let (mut mister_x, mut detective) = start_game(&mut server).await;
+    let mut game = start_game(&mut server).await;
 
-    receive_start_move_message(&mut mister_x, "mister_x").await;
-    receive_start_move_message(&mut detective, "mister_x").await;
+    game.receive_start_move_message("mister_x").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
     let colors: Vec<_> = game_state
         .unwrap()
         .players
@@ -247,83 +179,63 @@ async fn can_only_submit_if_all_moved() {
         .map(|player| player.color.clone())
         .collect();
 
-    send_message(&mut mister_x, "submitMove", None).await;
-    assert_receive_error(&mut mister_x, "not all moved").await;
+    send_message(&mut game.mister_x, "submitMove", None).await;
+    assert_receive_error(&mut game.mister_x, "not all moved").await;
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveMisterX",
         Some(json!([{ "station_id": 110, "transport_type": "taxi" }])),
     )
     .await;
 
-    send_message(&mut mister_x, "submitMove", None).await;
+    send_message(&mut game.mister_x, "submitMove", None).await;
 
-    assert_receive_message::<EndMove>(&mut mister_x, "endMove").await;
-    assert_receive_message::<EndMove>(&mut detective, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.mister_x, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.detective, "endMove").await;
 
-    receive_start_move_message(&mut mister_x, "detective").await;
-    receive_start_move_message(&mut detective, "detective").await;
+    game.receive_start_move_message("detective").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    assert_receive_message::<Game>(&mut game.detective, "gameState").await;
 
-    send_message(&mut detective, "submitMove", None).await;
-    assert_receive_error(&mut detective, "not all moved").await;
+    send_message(&mut game.detective, "submitMove", None).await;
+    assert_receive_error(&mut game.detective, "not all moved").await;
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[0], "station_id": 106, "transport_type": "taxi" }),
-    )
-    .await;
+    let _ = game.send_detective_move(&colors[0], 106, "taxi").await;
 
-    send_message(&mut detective, "submitMove", None).await;
-    assert_receive_error(&mut detective, "not all moved").await;
+    send_message(&mut game.detective, "submitMove", None).await;
+    assert_receive_error(&mut game.detective, "not all moved").await;
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[1], "station_id": 107, "transport_type": "bus" }),
-    )
-    .await;
+    let _ = game.send_detective_move(&colors[1], 107, "bus").await;
 
-    send_message(&mut detective, "submitMove", None).await;
-    assert_receive_error(&mut detective, "not all moved").await;
+    send_message(&mut game.detective, "submitMove", None).await;
+    assert_receive_error(&mut game.detective, "not all moved").await;
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[2], "station_id": 108, "transport_type": "bus" }),
-    )
-    .await;
+    let _ = game.send_detective_move(&colors[2], 108, "bus").await;
 
-    send_message(&mut detective, "submitMove", None).await;
-    assert_receive_error(&mut detective, "not all moved").await;
+    send_message(&mut game.detective, "submitMove", None).await;
+    assert_receive_error(&mut game.detective, "not all moved").await;
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[3], "station_id": 109, "transport_type": "underground" }),
-    )
-    .await;
+    let _ = game
+        .send_detective_move(&colors[3], 109, "underground")
+        .await;
 
-    send_message(&mut detective, "submitMove", None).await;
+    send_message(&mut game.detective, "submitMove", None).await;
 
-    assert_receive_message::<EndMove>(&mut mister_x, "endMove").await;
-    assert_receive_message::<EndMove>(&mut detective, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.mister_x, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.detective, "endMove").await;
 }
 
 #[tokio::test]
 async fn can_change_move() {
     let mut server = test_server();
-    let (mut mister_x, mut detective) = start_game(&mut server).await;
+    let mut game = start_game(&mut server).await;
 
-    receive_start_move_message(&mut mister_x, "mister_x").await;
-    receive_start_move_message(&mut detective, "mister_x").await;
+    game.receive_start_move_message("mister_x").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
     let colors: Vec<_> = game_state
         .unwrap()
         .players
@@ -332,140 +244,101 @@ async fn can_change_move() {
         .collect();
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveMisterX",
         Some(json!([{ "station_id": 120, "transport_type": "hidden" }])),
     )
     .await;
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveMisterX",
         Some(json!([{ "station_id": 110, "transport_type": "taxi" }])),
     )
     .await;
 
-    send_message(&mut mister_x, "submitMove", None).await;
+    send_message(&mut game.mister_x, "submitMove", None).await;
 
-    assert_receive_message::<EndMove>(&mut mister_x, "endMove").await;
-    assert_receive_message::<EndMove>(&mut detective, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.mister_x, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.detective, "endMove").await;
 
-    receive_start_move_message(&mut mister_x, "detective").await;
-    receive_start_move_message(&mut detective, "detective").await;
+    game.receive_start_move_message("detective").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
 
     assert_eq!(game_state.unwrap().mister_x.moves, vec![Move::Taxi]);
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[0], "station_id": 116, "transport_type": "taxi" }),
-    )
-    .await;
+    let _ = game.send_detective_move(&colors[0], 116, "taxi").await;
 
-    let game_state = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[0], "station_id": 106, "transport_type": "taxi" }),
-    )
-    .await;
+    let game_state = game.send_detective_move(&colors[0], 106, "taxi").await;
 
     assert_eq!(game_state.players[0].station_id, 106);
     assert_eq!(game_state.players[0].available_transport.taxi, 9);
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[1], "station_id": 117, "transport_type": "bus" }),
-    )
-    .await;
+    let _ = game.send_detective_move(&colors[1], 117, "bus").await;
 
-    let game_state = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[1], "station_id": 107, "transport_type": "bus" }),
-    )
-    .await;
+    let game_state = game.send_detective_move(&colors[1], 107, "bus").await;
 
     assert_eq!(game_state.players[1].station_id, 107);
     assert_eq!(game_state.players[1].available_transport.bus, 7);
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[2], "station_id": 108, "transport_type": "bus" }),
-    )
-    .await;
+    let _ = game.send_detective_move(&colors[2], 108, "bus").await;
 
-    let game_state = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[2], "station_id": 118, "transport_type": "bus" }),
-    )
-    .await;
+    let game_state = game.send_detective_move(&colors[2], 118, "bus").await;
 
     assert_eq!(game_state.players[2].station_id, 118);
     assert_eq!(game_state.players[2].available_transport.bus, 7);
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[3], "station_id": 109, "transport_type": "underground" }),
-    )
-    .await;
+    let _ = game
+        .send_detective_move(&colors[3], 109, "underground")
+        .await;
 
-    let game_state = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[3], "station_id": 119, "transport_type": "underground" }),
-    )
-    .await;
+    let game_state = game
+        .send_detective_move(&colors[3], 119, "underground")
+        .await;
 
     assert_eq!(game_state.players[3].station_id, 119);
     assert_eq!(game_state.players[3].available_transport.underground, 3);
 
-    send_message(&mut detective, "submitMove", None).await;
+    send_message(&mut game.detective, "submitMove", None).await;
 
-    assert_receive_message::<EndMove>(&mut mister_x, "endMove").await;
-    assert_receive_message::<EndMove>(&mut detective, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.mister_x, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.detective, "endMove").await;
 }
 
 #[tokio::test]
 async fn can_double_move() {
     let mut server = test_server();
-    let (mut mister_x, mut detective) = start_game(&mut server).await;
+    let mut game = start_game(&mut server).await;
 
-    receive_start_move_message(&mut mister_x, "mister_x").await;
-    receive_start_move_message(&mut detective, "mister_x").await;
+    game.receive_start_move_message("mister_x").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    let _ = assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let _ = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
 
-    send_message(&mut mister_x, "moveMisterX", Some(json!([]))).await;
-    assert_receive_error(&mut mister_x, "invalid move").await;
+    send_message(&mut game.mister_x, "moveMisterX", Some(json!([]))).await;
+    assert_receive_error(&mut game.mister_x, "invalid move").await;
 
-    send_message(&mut mister_x, "moveMisterX", Some(json!([{ "station_id": 110, "transport_type": "taxi" },{ "station_id": 110, "transport_type": "taxi" },{ "station_id": 110, "transport_type": "taxi" }]))).await;
-    assert_receive_error(&mut mister_x, "invalid move").await;
+    send_message(&mut game.mister_x, "moveMisterX", Some(json!([{ "station_id": 110, "transport_type": "taxi" },{ "station_id": 110, "transport_type": "taxi" },{ "station_id": 110, "transport_type": "taxi" }]))).await;
+    assert_receive_error(&mut game.mister_x, "invalid move").await;
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveMisterX",
         Some(json!([{ "station_id": 110, "transport_type": "taxi" },{ "station_id": 120, "transport_type": "hidden" }])),
     )
     .await;
 
-    send_message(&mut mister_x, "submitMove", None).await;
+    send_message(&mut game.mister_x, "submitMove", None).await;
 
-    assert_receive_message::<EndMove>(&mut mister_x, "endMove").await;
-    assert_receive_message::<EndMove>(&mut detective, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.mister_x, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.detective, "endMove").await;
 
-    receive_start_move_message(&mut mister_x, "detective").await;
-    receive_start_move_message(&mut detective, "detective").await;
+    game.receive_start_move_message("detective").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut detective, "gameState")
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState")
         .await
         .unwrap();
 
@@ -477,31 +350,29 @@ async fn can_double_move() {
 #[tokio::test]
 async fn can_move_hidden() {
     let mut server = test_server();
-    let (mut mister_x, mut detective) = start_game(&mut server).await;
+    let mut game = start_game(&mut server).await;
 
-    receive_start_move_message(&mut mister_x, "mister_x").await;
-    receive_start_move_message(&mut detective, "mister_x").await;
+    game.receive_start_move_message("mister_x").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    let _ = assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let _ = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveMisterX",
         Some(json!([{ "station_id": 120, "transport_type": "hidden" }])),
     )
     .await;
 
-    send_message(&mut mister_x, "submitMove", None).await;
+    send_message(&mut game.mister_x, "submitMove", None).await;
 
-    assert_receive_message::<EndMove>(&mut mister_x, "endMove").await;
-    assert_receive_message::<EndMove>(&mut detective, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.mister_x, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.detective, "endMove").await;
 
-    receive_start_move_message(&mut mister_x, "detective").await;
-    receive_start_move_message(&mut detective, "detective").await;
+    game.receive_start_move_message("detective").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut detective, "gameState")
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState")
         .await
         .unwrap();
 
@@ -512,13 +383,12 @@ async fn can_move_hidden() {
 #[tokio::test]
 async fn can_only_do_valid_moves() {
     let mut server = test_server();
-    let (mut mister_x, mut detective) = start_game(&mut server).await;
+    let mut game = start_game(&mut server).await;
 
-    receive_start_move_message(&mut mister_x, "mister_x").await;
-    receive_start_move_message(&mut detective, "mister_x").await;
+    game.receive_start_move_message("mister_x").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
     let colors: Vec<_> = game_state
         .unwrap()
         .players
@@ -527,64 +397,58 @@ async fn can_only_do_valid_moves() {
         .collect();
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveMisterX",
         Some(json!([{ "station_id": 110, "transport_type": "bus" }])),
     )
     .await;
 
-    assert_receive_error(&mut mister_x, "invalid move").await;
+    assert_receive_error(&mut game.mister_x, "invalid move").await;
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveMisterX",
         Some(json!([{ "station_id": 106, "transport_type": "taxi" }])),
     )
     .await;
 
-    assert_receive_error(&mut mister_x, "invalid move").await;
+    assert_receive_error(&mut game.mister_x, "invalid move").await;
 
     send_message(
-        &mut mister_x,
+        &mut game.mister_x,
         "moveMisterX",
         Some(json!([{ "station_id": 110, "transport_type": "hidden" }])),
     )
     .await;
 
-    send_message(&mut detective, "submitMove", None).await;
-    assert_receive_error(&mut detective, "not your turn").await;
+    send_message(&mut game.detective, "submitMove", None).await;
+    assert_receive_error(&mut game.detective, "not your turn").await;
 
-    send_message(&mut mister_x, "submitMove", None).await;
+    send_message(&mut game.mister_x, "submitMove", None).await;
 
-    assert_receive_message::<EndMove>(&mut mister_x, "endMove").await;
-    assert_receive_message::<EndMove>(&mut detective, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.mister_x, "endMove").await;
+    assert_receive_message::<EndMove>(&mut game.detective, "endMove").await;
 
-    receive_start_move_message(&mut mister_x, "detective").await;
-    receive_start_move_message(&mut detective, "detective").await;
+    game.receive_start_move_message("detective").await;
 
-    assert_receive_message::<Game>(&mut mister_x, "gameState").await;
-    assert_receive_message::<Game>(&mut detective, "gameState").await;
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    assert_receive_message::<Game>(&mut game.detective, "gameState").await;
 
     send_message(
-        &mut detective,
+        &mut game.detective,
         "moveDetective",
         Some(json!({ "color": colors[0], "station_id": 106, "transport_type": "underground" })),
     )
     .await;
-    assert_receive_error(&mut detective, "invalid move").await;
+    assert_receive_error(&mut game.detective, "invalid move").await;
 
     send_message(
-        &mut detective,
+        &mut game.detective,
         "moveDetective",
         Some(json!({ "color": colors[0], "station_id": 107, "transport_type": "bus" })),
     )
     .await;
-    assert_receive_error(&mut detective, "invalid move").await;
+    assert_receive_error(&mut game.detective, "invalid move").await;
 
-    let _ = send_detective_move(
-        &mut mister_x,
-        &mut detective,
-        json!({ "color": colors[0], "station_id": 106, "transport_type": "taxi" }),
-    )
-    .await;
+    let _ = game.send_detective_move(&colors[0], 106, "taxi").await;
 }

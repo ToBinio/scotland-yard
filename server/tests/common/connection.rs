@@ -2,7 +2,10 @@ use axum_test::{TestServer, TestWebSocket};
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::common::ws::{assert_receive_message, get_ws_connection, send_message};
+use crate::common::{
+    data::Game,
+    ws::{assert_receive_message, get_ws_connection, send_message},
+};
 
 pub async fn create_game(socket: &mut TestWebSocket) -> String {
     send_message(
@@ -24,7 +27,12 @@ pub async fn create_game(socket: &mut TestWebSocket) -> String {
     response.unwrap().id
 }
 
-pub async fn start_game(server: &mut TestServer) -> (TestWebSocket, TestWebSocket) {
+pub struct GameConnection {
+    pub mister_x: TestWebSocket,
+    pub detective: TestWebSocket,
+}
+
+pub async fn start_game(server: &mut TestServer) -> GameConnection {
     let mut player_1 = get_ws_connection(server).await;
     let mut player_2 = get_ws_connection(server).await;
 
@@ -46,8 +54,55 @@ pub async fn start_game(server: &mut TestServer) -> (TestWebSocket, TestWebSocke
     let _ = assert_receive_message::<GameStarted>(&mut player_2, "gameStarted").await;
 
     if role_1 == "detective" {
-        (player_2, player_1)
+        GameConnection {
+            mister_x: player_2,
+            detective: player_1,
+        }
     } else {
-        (player_1, player_2)
+        GameConnection {
+            mister_x: player_1,
+            detective: player_2,
+        }
+    }
+}
+
+impl GameConnection {
+    pub async fn receive_start_move_message(&mut self, expected_role: &str) {
+        Self::receive_start_move_message_for_player(&mut self.mister_x, expected_role).await;
+        Self::receive_start_move_message_for_player(&mut self.detective, expected_role).await;
+    }
+
+    async fn receive_start_move_message_for_player(
+        player: &mut TestWebSocket,
+        expected_role: &str,
+    ) {
+        #[derive(Debug, Deserialize)]
+        struct StartMove {
+            role: String,
+        }
+
+        let message = assert_receive_message::<StartMove>(player, "startMove").await;
+        assert_eq!(message.unwrap().role, expected_role);
+    }
+
+    pub async fn send_detective_move(
+        &mut self,
+        color: &str,
+        station: u8,
+        transport_type: &str,
+    ) -> Game {
+        send_message(
+            &mut self.detective,
+            "moveDetective",
+            Some(
+                json!({ "color": color, "station_id": station, "transport_type": transport_type }),
+            ),
+        )
+        .await;
+
+        assert_receive_message::<Game>(&mut self.mister_x, "gameState").await;
+        assert_receive_message::<Game>(&mut self.detective, "gameState")
+            .await
+            .unwrap()
     }
 }

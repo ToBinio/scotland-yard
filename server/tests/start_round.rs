@@ -7,23 +7,23 @@ mod common;
 #[tokio::test]
 async fn correctly_starts_round() {
     let mut server = test_server();
-    let (mut mister_x, mut detective) = start_game(&mut server).await;
+    let mut game = start_game(&mut server).await;
 
     #[derive(Debug, Deserialize)]
     struct StartMove {
         role: String,
     }
 
-    let message = assert_receive_message::<StartMove>(&mut mister_x, "startMove").await;
+    let message = assert_receive_message::<StartMove>(&mut game.mister_x, "startMove").await;
     assert_eq!(message.unwrap().role, "mister_x");
-    let message = assert_receive_message::<StartMove>(&mut detective, "startMove").await;
+    let message = assert_receive_message::<StartMove>(&mut game.detective, "startMove").await;
     assert_eq!(message.unwrap().role, "mister_x");
 
-    let message = assert_receive_message::<Game>(&mut mister_x, "gameState").await;
+    let message = assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
     assert!(message.is_some());
     assert!(message.unwrap().mister_x.station_id.is_some());
 
-    let message = assert_receive_message::<Game>(&mut detective, "gameState").await;
+    let message = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
     assert!(message.is_some());
 
     let message = message.unwrap();
