@@ -26,12 +26,13 @@ pub async fn send_message(
     }
 }
 
-pub async fn receive_message<T: serde::de::DeserializeOwned>(
+async fn receive_message<T: serde::de::DeserializeOwned>(
     connection: &mut TestWebSocket,
+    message_name: &str,
 ) -> (String, Option<T>) {
     let message = timeout(Duration::from_millis(500), connection.receive_text())
         .await
-        .map_err(|_| "expected ws packet but did not recieve")
+        .map_err(|err| format!("expected ws packet but did not recieve {}", err))
         .unwrap();
     let mut split = message.splitn(2, " ");
 
@@ -43,7 +44,14 @@ pub async fn receive_message<T: serde::de::DeserializeOwned>(
         .to_string();
 
     if let Some(data) = split.next() {
-        let data = serde_json::from_str(data).unwrap();
+        let data = serde_json::from_str(data)
+            .map_err(|err| {
+                format!(
+                    "expected json data for '{}' but got '{}' - error {}",
+                    message_name, name, err
+                )
+            })
+            .unwrap();
         return (name, Some(data));
     }
 
@@ -54,10 +62,13 @@ pub async fn assert_receive_message<T: serde::de::DeserializeOwned>(
     connection: &mut TestWebSocket,
     name: &str,
 ) -> Option<T> {
-    let (received_name, message) = timeout(Duration::from_millis(200), receive_message(connection))
-        .await
-        .map_err(|_| format!("expected ws packet '{}' but did not recieve", name))
-        .unwrap();
+    let (received_name, message) = timeout(
+        Duration::from_millis(200),
+        receive_message(connection, name),
+    )
+    .await
+    .map_err(|_| format!("expected ws packet '{}' but did not recieve", name))
+    .unwrap();
     assert_eq!(received_name, name);
     message
 }
@@ -70,7 +81,7 @@ pub async fn assert_receive_error(connection: &mut TestWebSocket, message: &str)
 
     let (received_name, response) = timeout(
         Duration::from_millis(200),
-        receive_message::<Error>(connection),
+        receive_message::<Error>(connection, "error"),
     )
     .await
     .map_err(|_| format!("expected error '{}' but did not recieve", message))

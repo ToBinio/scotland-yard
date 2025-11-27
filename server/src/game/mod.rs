@@ -10,7 +10,7 @@ use crate::{
         mister_x::{self, MisterX},
     },
     routes::game::packet::{
-        DetectiveData, DetectiveTransportData, GameStartedPacket, GameStatePacket,
+        DetectiveData, DetectiveTransportData, GameEndedPacket, GameStartedPacket, GameStatePacket,
         MisterXAbilityData, MisterXData, ServerPacket, StartMovePacket,
     },
     services::{
@@ -277,6 +277,15 @@ impl Game {
 
         self.send_all(ServerPacket::EndMove).await;
 
+        if self
+            .detectives
+            .iter()
+            .any(|detective| detective.station_id() == self.mister_x.station_id())
+        {
+            self.end_game(Role::Detective).await;
+            return Ok(());
+        }
+
         match self.active_role {
             Role::Detective => {
                 self.game_round += 1;
@@ -286,6 +295,13 @@ impl Game {
         };
 
         Ok(())
+    }
+
+    pub async fn end_game(&mut self, winner: Role) {
+        self.send_all(ServerPacket::GameEnded(GameEndedPacket { winner }))
+            .await;
+
+        self.send_game_state().await;
     }
 
     pub fn get_user_role(&self, id: PlayerId) -> Role {
@@ -299,14 +315,12 @@ impl Game {
     fn has_connection(&self, from: u8, to: u8, action_type: &dyn ActionTypeTrait) -> bool {
         let connections = self.data_service.get_all_connections();
 
-        let connection = connections
+        connections
             .iter()
             .filter(|connection| {
                 (connection.from == from && connection.to == to)
                     || (connection.from == to && connection.to == from)
             })
-            .any(|connection| action_type.matches(&connection.mode));
-
-        connection
+            .any(|connection| action_type.matches(&connection.mode))
     }
 }

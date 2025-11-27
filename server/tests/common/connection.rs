@@ -85,6 +85,25 @@ impl GameConnection {
         assert_eq!(message.unwrap().role, expected_role);
     }
 
+    pub async fn receive_game_ended_message(&mut self, expected_winner: &str) {
+        #[derive(Debug, Deserialize)]
+        struct GameEnded {
+            winner: String,
+        }
+
+        let msg = assert_receive_message::<GameEnded>(&mut self.mister_x, "gameEnded")
+            .await
+            .unwrap();
+        assert_eq!(msg.winner, expected_winner);
+        assert_receive_message::<GameEnded>(&mut self.detective, "gameEnded")
+            .await
+            .unwrap();
+        assert_eq!(msg.winner, expected_winner);
+
+        assert_receive_message::<Game>(&mut self.mister_x, "gameState").await;
+        assert_receive_message::<Game>(&mut self.detective, "gameState").await;
+    }
+
     pub async fn send_detective_move(
         &mut self,
         color: &str,

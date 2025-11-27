@@ -58,6 +58,11 @@ impl DataServiceTrait for DataService {
             },
             Connection {
                 from: 100,
+                to: 110,
+                mode: StationType::Taxi,
+            },
+            Connection {
+                from: 100,
                 to: 116,
                 mode: StationType::Taxi,
             },
@@ -108,6 +113,11 @@ impl DataServiceTrait for DataService {
             Connection {
                 from: 110,
                 to: 120,
+                mode: StationType::Bus,
+            },
+            Connection {
+                from: 110,
+                to: 106,
                 mode: StationType::Bus,
             },
         ]

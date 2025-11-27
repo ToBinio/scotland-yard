@@ -87,6 +87,11 @@ pub struct MoveDetectivePacket {
     pub transport_type: detective::ActionType,
 }
 
+#[derive(Deserialize, Serialize, Clone)]
+pub struct GameEndedPacket {
+    pub winner: Role,
+}
+
 #[derive(Clone)]
 pub enum ServerPacket {
     Error(ErrorPacket),
@@ -95,6 +100,7 @@ pub enum ServerPacket {
     StartMove(StartMovePacket),
     GameState(GameStatePacket),
     EndMove,
+    GameEnded(GameEndedPacket),
 }
 
 pub enum ClientPacket {
@@ -131,6 +137,9 @@ impl Display for ServerPacket {
                 ("gameState", Some(serde_json::to_string(content).unwrap()))
             }
             ServerPacket::EndMove => ("endMove", None),
+            ServerPacket::GameEnded(content) => {
+                ("gameEnded", Some(serde_json::to_string(content).unwrap()))
+            }
         };
 
         if let Some(content) = content {
