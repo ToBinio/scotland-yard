@@ -101,7 +101,11 @@ impl GameConnection {
         assert_eq!(msg.winner, expected_winner);
 
         assert_receive_message::<Game>(&mut self.mister_x, "gameState").await;
-        assert_receive_message::<Game>(&mut self.detective, "gameState").await;
+        let data = assert_receive_message::<Game>(&mut self.detective, "gameState")
+            .await
+            .unwrap();
+
+        assert!(data.mister_x.station_id.is_some());
     }
 
     pub async fn send_detective_move(

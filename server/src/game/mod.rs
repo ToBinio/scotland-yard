@@ -112,10 +112,10 @@ impl Game {
             .await
             .unwrap();
 
-        self.send_game_state().await;
+        self.send_game_state(self.should_show_mister_x()).await;
     }
 
-    async fn send_game_state(&self) {
+    async fn send_game_state(&self, show_mister_x: bool) {
         let mut packet = GameStatePacket {
             players: self
                 .detectives
@@ -146,12 +146,7 @@ impl Game {
             .await
             .unwrap();
 
-        if let Some(round) = self
-            .data_service
-            .get_all_rounds()
-            .get(self.game_round as usize)
-            && round.show_mister_x.not()
-        {
+        if show_mister_x.not() {
             packet.mister_x.station_id = None;
         }
 
@@ -161,6 +156,17 @@ impl Game {
                 .send(ServerPacket::GameState(packet.clone()))
                 .await
                 .unwrap();
+        }
+    }
+
+    fn should_show_mister_x(&self) -> bool {
+        match self
+            .data_service
+            .get_all_rounds()
+            .get(self.game_round as usize)
+        {
+            Some(round) => round.show_mister_x,
+            None => false,
         }
     }
 
@@ -274,7 +280,7 @@ impl Game {
             action_type: transport_type,
         });
 
-        self.send_game_state().await;
+        self.send_game_state(self.should_show_mister_x()).await;
 
         Ok(())
     }
@@ -326,7 +332,7 @@ impl Game {
         self.send_all(ServerPacket::GameEnded(GameEndedPacket { winner }))
             .await;
 
-        self.send_game_state().await;
+        self.send_game_state(true).await;
     }
 
     pub fn get_user_role(&self, id: PlayerId) -> Role {
