@@ -1,22 +1,11 @@
-use crate::common::{connection::start_game, data::Game, test_server, ws::assert_receive_message};
+use crate::common::{connection::start_game_with_colors, test_server};
 
 mod common;
 
 #[tokio::test]
 async fn shows_mister_x() {
     let mut server = test_server();
-    let mut game = start_game(&mut server).await;
-
-    game.receive_start_move_message("mister_x").await;
-
-    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
-    let colors: Vec<_> = game_state
-        .unwrap()
-        .players
-        .iter()
-        .map(|player| player.color.clone())
-        .collect();
+    let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     let state = game.full_move_mister_x(110).await;
     assert!(state.mister_x.station_id.is_none());

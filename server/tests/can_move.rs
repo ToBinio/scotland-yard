@@ -2,7 +2,7 @@ use serde::Deserialize;
 use serde_json::json;
 
 use crate::common::{
-    connection::start_game,
+    connection::{start_game, start_game_with_colors},
     data::{Game, Move},
     test_server,
     ws::{assert_receive_error, assert_receive_message, send_message},
@@ -16,18 +16,7 @@ struct EndMove;
 #[tokio::test]
 async fn can_move() {
     let mut server = test_server();
-    let mut game = start_game(&mut server).await;
-
-    game.receive_start_move_message("mister_x").await;
-
-    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
-    let colors: Vec<_> = game_state
-        .unwrap()
-        .players
-        .iter()
-        .map(|player| player.color.clone())
-        .collect();
+    let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     send_message(
         &mut game.mister_x,
@@ -79,18 +68,7 @@ async fn can_move() {
 #[tokio::test]
 async fn non_active_can_not_send_or_submit_move() {
     let mut server = test_server();
-    let mut game = start_game(&mut server).await;
-
-    game.receive_start_move_message("mister_x").await;
-
-    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
-    let colors: Vec<_> = game_state
-        .unwrap()
-        .players
-        .iter()
-        .map(|player| player.color.clone())
-        .collect();
+    let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     send_message(
         &mut game.detective,
@@ -166,18 +144,7 @@ async fn non_active_can_not_send_or_submit_move() {
 #[tokio::test]
 async fn can_only_submit_if_all_moved() {
     let mut server = test_server();
-    let mut game = start_game(&mut server).await;
-
-    game.receive_start_move_message("mister_x").await;
-
-    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
-    let colors: Vec<_> = game_state
-        .unwrap()
-        .players
-        .iter()
-        .map(|player| player.color.clone())
-        .collect();
+    let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     send_message(&mut game.mister_x, "submitMove", None).await;
     assert_receive_error(&mut game.mister_x, "not all moved").await;
@@ -230,18 +197,7 @@ async fn can_only_submit_if_all_moved() {
 #[tokio::test]
 async fn can_change_move() {
     let mut server = test_server();
-    let mut game = start_game(&mut server).await;
-
-    game.receive_start_move_message("mister_x").await;
-
-    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
-    let colors: Vec<_> = game_state
-        .unwrap()
-        .players
-        .iter()
-        .map(|player| player.color.clone())
-        .collect();
+    let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     send_message(
         &mut game.mister_x,
@@ -383,18 +339,7 @@ async fn can_move_hidden() {
 #[tokio::test]
 async fn can_only_do_valid_moves() {
     let mut server = test_server();
-    let mut game = start_game(&mut server).await;
-
-    game.receive_start_move_message("mister_x").await;
-
-    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
-    let colors: Vec<_> = game_state
-        .unwrap()
-        .players
-        .iter()
-        .map(|player| player.color.clone())
-        .collect();
+    let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     send_message(
         &mut game.mister_x,

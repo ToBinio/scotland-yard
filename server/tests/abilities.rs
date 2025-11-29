@@ -2,7 +2,7 @@ use serde::Deserialize;
 use serde_json::json;
 
 use crate::common::{
-    connection::{GameConnection, start_game},
+    connection::{GameConnection, start_game_with_colors},
     data::Game,
     test_server,
     ws::{assert_receive_error, assert_receive_message, send_message},
@@ -13,18 +13,7 @@ mod common;
 #[tokio::test]
 async fn mister_x_hidden() {
     let mut server = test_server();
-    let mut game = start_game(&mut server).await;
-
-    game.receive_start_move_message("mister_x").await;
-
-    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
-    let colors: Vec<_> = game_state
-        .unwrap()
-        .players
-        .iter()
-        .map(|player| player.color.clone())
-        .collect();
+    let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     game.hidden_move_mister_x(110).await;
 
@@ -73,18 +62,7 @@ impl GameConnection {
 #[tokio::test]
 async fn mister_x_double() {
     let mut server = test_server();
-    let mut game = start_game(&mut server).await;
-
-    game.receive_start_move_message("mister_x").await;
-
-    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
-    let colors: Vec<_> = game_state
-        .unwrap()
-        .players
-        .iter()
-        .map(|player| player.color.clone())
-        .collect();
+    let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     game.double_move_mister_x().await;
 
@@ -133,18 +111,7 @@ impl GameConnection {
 #[tokio::test]
 async fn detective_undeground() {
     let mut server = test_server();
-    let mut game = start_game(&mut server).await;
-
-    game.receive_start_move_message("mister_x").await;
-
-    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
-    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
-    let colors: Vec<_> = game_state
-        .unwrap()
-        .players
-        .iter()
-        .map(|player| player.color.clone())
-        .collect();
+    let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     game.full_move_mister_x(110).await;
 

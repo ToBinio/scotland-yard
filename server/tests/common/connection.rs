@@ -66,6 +66,23 @@ pub async fn start_game(server: &mut TestServer) -> GameConnection {
     }
 }
 
+pub async fn start_game_with_colors(server: &mut TestServer) -> (GameConnection, Vec<String>) {
+    let mut game = start_game(server).await;
+
+    game.receive_start_move_message("mister_x").await;
+
+    assert_receive_message::<Game>(&mut game.mister_x, "gameState").await;
+    let game_state = assert_receive_message::<Game>(&mut game.detective, "gameState").await;
+    let colors: Vec<_> = game_state
+        .unwrap()
+        .players
+        .iter()
+        .map(|player| player.color.clone())
+        .collect();
+
+    (game, colors)
+}
+
 impl GameConnection {
     pub async fn receive_start_move_message(&mut self, expected_role: &str) {
         Self::receive_start_move_message_for_player(&mut self.mister_x, expected_role).await;
