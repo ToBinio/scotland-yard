@@ -150,10 +150,9 @@ impl Game {
             .data_service
             .get_all_rounds()
             .get(self.game_round as usize)
+            && round.show_mister_x.not()
         {
-            if round.show_mister_x.not() {
-                packet.mister_x.station_id = None;
-            }
+            packet.mister_x.station_id = None;
         }
 
         for player in &self.detective_players {
@@ -310,6 +309,11 @@ impl Game {
         match self.active_role {
             Role::Detective => {
                 self.game_round += 1;
+                if self.game_round as usize == self.data_service.get_all_rounds().len() {
+                    self.end_game(Role::MisterX).await;
+                    return Ok(());
+                }
+
                 self.start_move(Role::MisterX).await
             }
             Role::MisterX => self.start_move(Role::Detective).await,

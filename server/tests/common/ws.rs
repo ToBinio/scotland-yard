@@ -47,8 +47,8 @@ async fn receive_message<T: serde::de::DeserializeOwned>(
         let data = serde_json::from_str(data)
             .map_err(|err| {
                 format!(
-                    "expected json data for '{}' but got '{}' - error {}",
-                    message_name, name, err
+                    "expected json data for '{}' but got '{}' with {} - error {}",
+                    message_name, name, data, err
                 )
             })
             .unwrap();

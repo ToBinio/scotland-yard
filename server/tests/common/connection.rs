@@ -125,7 +125,7 @@ impl GameConnection {
             .unwrap()
     }
 
-    pub async fn full_move_detectives(&mut self, colors: &Vec<String>, stations: &[u8; 4]) -> Game {
+    pub async fn full_move_detectives(&mut self, colors: &[String], stations: &[u8; 4]) -> Game {
         #[derive(Debug, Deserialize)]
         struct EndMove;
 

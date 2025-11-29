@@ -96,6 +96,11 @@ impl DataServiceTrait for DataService {
             },
             Connection {
                 from: 103,
+                to: 109,
+                mode: StationType::Taxi,
+            },
+            Connection {
+                from: 103,
                 to: 119,
                 mode: StationType::Underground,
             },
@@ -126,7 +131,7 @@ impl DataServiceTrait for DataService {
     fn get_all_rounds(&self) -> Vec<Round> {
         const SHOWS_MISTER_X: [i32; 5] = [3, 8, 13, 18, 24];
 
-        (1..=24)
+        (1..=5)
             .map(|index| Round {
                 index: index as u8,
                 show_mister_x: SHOWS_MISTER_X.contains(&{ index }),
