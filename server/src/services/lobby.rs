@@ -62,21 +62,19 @@ impl LobbyService {
 
     pub fn join(
         &mut self,
+        connection_id: Uuid,
         lobby_id: &LobbyId,
         sender: Sender<ServerPacket>,
-    ) -> Result<PlayerId, LobbyServiceError> {
-        let id = Uuid::new_v4();
-
+    ) -> Result<(), LobbyServiceError> {
         let lobby = self
             .lobbies
             .get_mut(lobby_id)
             .ok_or(LobbyServiceError::UnknownLobby)?;
         lobby.players.push(Player {
-            uuid: id,
+            uuid: connection_id,
             ws_sender: sender,
         });
-
-        Ok(id)
+        Ok(())
     }
 
     pub fn close_lobby(&mut self, lobby_id: &LobbyId) {

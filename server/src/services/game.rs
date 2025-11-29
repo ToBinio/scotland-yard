@@ -13,6 +13,7 @@ use crate::{
     services::{
         data::DataServiceHandle,
         lobby::{Lobby, LobbyId},
+        ws_connection::WsConnectionServiceHandle,
     },
 };
 
@@ -34,13 +35,18 @@ pub enum GameServiceError {
 pub struct GameService {
     games: HashMap<GameId, Game>,
     data_service: DataServiceHandle,
+    ws_connection_service: WsConnectionServiceHandle,
 }
 
 impl GameService {
-    pub fn new(data_service: DataServiceHandle) -> Self {
+    pub fn new(
+        data_service: DataServiceHandle,
+        ws_connection_service: WsConnectionServiceHandle,
+    ) -> Self {
         Self {
             games: HashMap::new(),
             data_service,
+            ws_connection_service,
         }
     }
 
@@ -95,5 +101,16 @@ impl GameService {
         self.games
             .get_mut(game_id)
             .ok_or(GameServiceError::UnknownGame)
+    }
+
+    pub async fn close_game(&mut self, game_id: &GameId) {
+        let game = self.get_game(game_id).unwrap();
+
+        for player in game.all_players() {
+            let mut connections = self.ws_connection_service.lock().await;
+            let _ = connections.set_game_id(player, None);
+        }
+
+        self.games.remove(game_id);
     }
 }

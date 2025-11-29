@@ -2,6 +2,7 @@ use std::ops::Not;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use uuid::Uuid;
 
 use crate::{
     game::character::{
@@ -170,6 +171,13 @@ impl Game {
         }
     }
 
+    pub fn all_players(&self) -> Vec<Uuid> {
+        let mut players = vec![];
+        players.extend(self.detective_players.iter().map(|player| player.uuid));
+        players.push(self.mister_x_player.uuid);
+        players
+    }
+
     async fn send_all(&self, packet: ServerPacket) {
         for player in &self.detective_players {
             player.ws_sender.send(packet.clone()).await.unwrap();
@@ -285,7 +293,8 @@ impl Game {
         Ok(())
     }
 
-    pub async fn end_move(&mut self) -> Result<(), GameError> {
+    /// returns true if the game is over, false otherwise
+    pub async fn end_move(&mut self) -> Result<bool, GameError> {
         match self.active_role {
             Role::Detective => {
                 for detective in &self.detectives {
@@ -309,7 +318,7 @@ impl Game {
             .any(|detective| detective.station_id() == self.mister_x.station_id())
         {
             self.end_game(Role::Detective).await;
-            return Ok(());
+            return Ok(true);
         }
 
         match self.active_role {
@@ -317,7 +326,7 @@ impl Game {
                 self.game_round += 1;
                 if self.game_round as usize == self.data_service.get_all_rounds().len() {
                     self.end_game(Role::MisterX).await;
-                    return Ok(());
+                    return Ok(true);
                 }
 
                 self.start_move(Role::MisterX).await
@@ -325,7 +334,7 @@ impl Game {
             Role::MisterX => self.start_move(Role::Detective).await,
         };
 
-        Ok(())
+        Ok(false)
     }
 
     pub async fn end_game(&mut self, winner: Role) {

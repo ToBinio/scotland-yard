@@ -20,6 +20,7 @@ use crate::services::{
     data::DataServiceHandle,
     game::{GameService, GameServiceHandle},
     lobby::{LobbyService, LobbyServiceHandle},
+    ws_connection::{WsConnectionService, WsConnectionServiceHandle},
 };
 
 pub mod game;
@@ -48,6 +49,7 @@ pub struct AppState {
     data: DataServiceHandle,
     lobby: LobbyServiceHandle,
     game: GameServiceHandle,
+    ws_connection: WsConnectionServiceHandle,
 }
 
 impl FromRef<AppState> for DataServiceHandle {
@@ -68,16 +70,28 @@ impl FromRef<AppState> for GameServiceHandle {
     }
 }
 
+impl FromRef<AppState> for WsConnectionServiceHandle {
+    fn from_ref(input: &AppState) -> Self {
+        input.ws_connection.clone()
+    }
+}
+
 pub fn app(data_service: DataServiceHandle) -> Router {
     let cors_layer = CorsLayer::new()
         .allow_headers(Any)
         .allow_origin(Any)
         .allow_methods(Any);
 
+    let ws_connection = Arc::new(Mutex::new(WsConnectionService::default()));
+
     let state = AppState {
         data: data_service.clone(),
         lobby: Arc::new(Mutex::new(LobbyService::default())),
-        game: Arc::new(Mutex::new(GameService::new(data_service.clone()))),
+        ws_connection: ws_connection.clone(),
+        game: Arc::new(Mutex::new(GameService::new(
+            data_service.clone(),
+            ws_connection.clone(),
+        ))),
     };
 
     Router::new()
