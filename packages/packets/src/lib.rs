@@ -2,14 +2,14 @@ use std::{error::Error, fmt::Display};
 
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use thiserror::Error;
+use uuid::Uuid;
 
-use crate::{
-    game::{
-        Role,
-        character::{detective, mister_x},
-    },
-    services::lobby::LobbyId,
-};
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Role {
+    Detective,
+    MisterX,
+}
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ErrorPacket {
@@ -23,12 +23,12 @@ pub struct CreateGamePacket {
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct GamePacket {
-    pub id: LobbyId,
+    pub id: Uuid,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct JoinGamePacket {
-    pub id: LobbyId,
+    pub id: Uuid,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -59,7 +59,7 @@ pub struct DetectiveTransportData {
 pub struct MisterXData {
     pub station_id: Option<u8>,
     pub abilities: MisterXAbilityData,
-    pub moves: Vec<mister_x::ActionType>,
+    pub moves: Vec<MisterXActionType>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -74,17 +74,34 @@ pub struct GameStatePacket {
     pub mister_x: MisterXData,
 }
 
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum MisterXActionType {
+    Taxi,
+    Bus,
+    Underground,
+    Hidden,
+}
+
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MoveMisterXPacket {
     pub station_id: u8,
-    pub transport_type: mister_x::ActionType,
+    pub transport_type: MisterXActionType,
+}
+
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum DetectiveActionType {
+    Taxi,
+    Bus,
+    Underground,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MoveDetectivePacket {
     pub color: String,
     pub station_id: u8,
-    pub transport_type: detective::ActionType,
+    pub transport_type: DetectiveActionType,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

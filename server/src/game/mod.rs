@@ -1,18 +1,19 @@
 use std::ops::Not;
 
-use serde::{Deserialize, Serialize};
+use packets::{DetectiveActionType, MisterXActionType, Role};
 use thiserror::Error;
 use uuid::Uuid;
+
+use packets::{
+    DetectiveData, DetectiveTransportData, GameEndedPacket, GameStartedPacket, GameStatePacket,
+    MisterXAbilityData, MisterXData, ServerPacket, StartMovePacket,
+};
 
 use crate::{
     game::character::{
         ActionTypeTrait, Character,
         detective::{self, Detective},
         mister_x::{self, MisterX},
-    },
-    routes::game::packet::{
-        DetectiveData, DetectiveTransportData, GameEndedPacket, GameStartedPacket, GameStatePacket,
-        MisterXAbilityData, MisterXData, ServerPacket, StartMovePacket,
     },
     services::{
         data::DataServiceHandle,
@@ -21,13 +22,6 @@ use crate::{
 };
 
 pub mod character;
-
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum Role {
-    Detective,
-    MisterX,
-}
 
 #[derive(Error, Debug, PartialEq)]
 pub enum GameError {
@@ -185,10 +179,7 @@ impl Game {
         self.mister_x_player.ws_sender.send(packet).await.unwrap();
     }
 
-    pub fn move_mister_x(
-        &mut self,
-        moves: Vec<(u8, mister_x::ActionType)>,
-    ) -> Result<(), GameError> {
+    pub fn move_mister_x(&mut self, moves: Vec<(u8, MisterXActionType)>) -> Result<(), GameError> {
         if moves.len() > 2 {
             return Err(GameError::InvalidMove);
         }
@@ -255,7 +246,7 @@ impl Game {
         &mut self,
         color: String,
         station_id: u8,
-        transport_type: detective::ActionType,
+        transport_type: DetectiveActionType,
     ) -> Result<(), GameError> {
         let detective = self
             .detectives

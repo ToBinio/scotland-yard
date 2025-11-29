@@ -4,7 +4,7 @@ use thiserror::Error;
 use tokio::sync::{Mutex, mpsc::Sender};
 use uuid::Uuid;
 
-use crate::routes::game::packet::ServerPacket;
+use packets::ServerPacket;
 
 pub struct Settings {
     pub number_of_detectives: usize,

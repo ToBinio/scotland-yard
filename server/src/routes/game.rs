@@ -9,14 +9,14 @@ use axum::{
     response::IntoResponse,
     routing::any,
 };
+use packets::{ClientPacket, GamePacket, Role, ServerPacket};
 use thiserror::Error;
 use tokio::sync::mpsc::{self, Sender};
 use uuid::Uuid;
 
 use crate::{
     AppState,
-    game::{Game, GameError, Role},
-    routes::game::packet::{ClientPacket, GamePacket, ServerPacket},
+    game::{Game, GameError},
     services::{
         game::{GameServiceError, GameServiceHandle},
         lobby::{LobbyServiceError, LobbyServiceHandle},
@@ -25,8 +25,6 @@ use crate::{
 };
 
 use futures_util::{sink::SinkExt, stream::StreamExt};
-
-pub mod packet;
 
 pub fn routes(state: AppState) -> Router {
     Router::new()

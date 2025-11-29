@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use packets::DetectiveActionType;
 
 use crate::{
     game::character::{ActionTypeTrait, Character},
@@ -7,23 +7,15 @@ use crate::{
 
 pub struct Action {
     pub station: u8,
-    pub action_type: ActionType,
+    pub action_type: DetectiveActionType,
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum ActionType {
-    Taxi,
-    Bus,
-    Underground,
-}
-
-impl ActionTypeTrait for ActionType {
+impl ActionTypeTrait for DetectiveActionType {
     fn matches(&self, station_type: &StationType) -> bool {
         match station_type {
-            StationType::Taxi => matches!(self, ActionType::Taxi),
-            StationType::Bus => matches!(self, ActionType::Bus),
-            StationType::Underground => matches!(self, ActionType::Underground),
+            StationType::Taxi => matches!(self, DetectiveActionType::Taxi),
+            StationType::Bus => matches!(self, DetectiveActionType::Bus),
+            StationType::Underground => matches!(self, DetectiveActionType::Underground),
             StationType::Water => false,
         }
     }
@@ -38,7 +30,7 @@ pub struct Detective {
 impl Character for Detective {
     type Action = Action;
 
-    type ActionType = ActionType;
+    type ActionType = DetectiveActionType;
 
     fn station_id(&self) -> u8 {
         match self.actions.last() {
@@ -70,9 +62,9 @@ impl Character for Detective {
 
     fn can_do_action(&self, action: &Self::ActionType) -> bool {
         match action {
-            ActionType::Taxi => self.taxi() > 0,
-            ActionType::Bus => self.bus() > 0,
-            ActionType::Underground => self.underground() > 0,
+            DetectiveActionType::Taxi => self.taxi() > 0,
+            DetectiveActionType::Bus => self.bus() > 0,
+            DetectiveActionType::Underground => self.underground() > 0,
         }
     }
 }
@@ -94,7 +86,7 @@ impl Detective {
         let count = self
             .actions
             .iter()
-            .filter(|step| matches!(step.action_type, ActionType::Taxi))
+            .filter(|step| matches!(step.action_type, DetectiveActionType::Taxi))
             .count() as u8;
 
         10 - count
@@ -104,7 +96,7 @@ impl Detective {
         let count = self
             .actions
             .iter()
-            .filter(|step| matches!(step.action_type, ActionType::Bus))
+            .filter(|step| matches!(step.action_type, DetectiveActionType::Bus))
             .count() as u8;
 
         8 - count
@@ -114,7 +106,7 @@ impl Detective {
         let count = self
             .actions
             .iter()
-            .filter(|step| matches!(step.action_type, ActionType::Underground))
+            .filter(|step| matches!(step.action_type, DetectiveActionType::Underground))
             .count() as u8;
 
         4 - count

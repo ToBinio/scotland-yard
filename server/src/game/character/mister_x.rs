@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use packets::MisterXActionType;
 
 use crate::{
     game::character::{ActionTypeTrait, Character},
@@ -7,7 +7,7 @@ use crate::{
 
 pub struct MoveData {
     pub station: u8,
-    pub action_type: ActionType,
+    pub action_type: MisterXActionType,
 }
 
 pub enum Action {
@@ -15,26 +15,17 @@ pub enum Action {
     Double(MoveData, MoveData),
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum ActionType {
-    Taxi,
-    Bus,
-    Underground,
-    Hidden,
-}
-
-impl ActionTypeTrait for ActionType {
+impl ActionTypeTrait for MisterXActionType {
     fn matches(&self, station_type: &StationType) -> bool {
-        if matches!(self, ActionType::Hidden) {
+        if matches!(self, MisterXActionType::Hidden) {
             return true;
         }
 
         match station_type {
-            StationType::Taxi => matches!(self, ActionType::Taxi),
-            StationType::Bus => matches!(self, ActionType::Bus),
-            StationType::Underground => matches!(self, ActionType::Underground),
-            StationType::Water => matches!(self, ActionType::Hidden),
+            StationType::Taxi => matches!(self, MisterXActionType::Taxi),
+            StationType::Bus => matches!(self, MisterXActionType::Bus),
+            StationType::Underground => matches!(self, MisterXActionType::Underground),
+            StationType::Water => matches!(self, MisterXActionType::Hidden),
         }
     }
 }
@@ -47,7 +38,7 @@ pub struct MisterX {
 impl Character for MisterX {
     type Action = Action;
 
-    type ActionType = ActionType;
+    type ActionType = MisterXActionType;
 
     fn station_id(&self) -> u8 {
         match self.actions.last() {
@@ -88,10 +79,10 @@ impl Character for MisterX {
 
     fn can_do_action(&self, action: &Self::ActionType) -> bool {
         match action {
-            ActionType::Taxi => true,
-            ActionType::Bus => true,
-            ActionType::Underground => true,
-            ActionType::Hidden => self.hidden() > 0,
+            MisterXActionType::Taxi => true,
+            MisterXActionType::Bus => true,
+            MisterXActionType::Underground => true,
+            MisterXActionType::Hidden => self.hidden() > 0,
         }
     }
 }
@@ -109,7 +100,7 @@ impl MisterX {
         let count = self
             .action_types()
             .into_iter()
-            .filter(|step| step.eq(&ActionType::Hidden))
+            .filter(|step| step.eq(&MisterXActionType::Hidden))
             .count() as u8;
 
         2 - count
