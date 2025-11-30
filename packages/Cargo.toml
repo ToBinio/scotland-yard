@@ -1,2 +1,2 @@
 [workspace]
-members = ["game","packets"]
+members = ["game", "map_utils","packets"]

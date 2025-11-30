@@ -40,4 +40,5 @@ pub struct MisterXGame {
 pub struct Game {
     pub players: Vec<PlayerGame>,
     pub mister_x: MisterXGame,
+    pub round: u8,
 }

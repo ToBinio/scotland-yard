@@ -228,8 +228,6 @@ impl Connection {
     }
 
     async fn handle_client_packet(&mut self, packet: ClientPacket) -> Result<(), ConnectionError> {
-        println!("Received packet: {:?}", self.game_id().await);
-
         match packet {
             ClientPacket::CreateGame(packet) => {
                 let id = self

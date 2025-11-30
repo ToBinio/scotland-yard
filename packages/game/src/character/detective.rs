@@ -88,7 +88,8 @@ impl Detective {
             .filter(|step| matches!(step.action_type, DetectiveActionType::Taxi))
             .count() as u8;
 
-        10 - count
+        //todo: revert to 10
+        50 - count
     }
 
     pub fn bus(&self) -> u8 {

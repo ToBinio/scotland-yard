@@ -106,6 +106,7 @@ impl<E: EventListener> Game<E> {
                 },
                 moves: self.mister_x.action_types(),
             },
+            round: self.game_round,
         };
 
         self.event_listener

@@ -29,6 +29,7 @@ async fn correctly_starts_round() {
     let message = message.unwrap();
     assert!(message.mister_x.station_id.is_none());
     assert_eq!(message.players.len(), 4);
+    assert_eq!(message.round, 0);
 
     assert_eq!(message.players[0].available_transport.taxi, 10);
     assert_eq!(message.players[0].available_transport.bus, 8);

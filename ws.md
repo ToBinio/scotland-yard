@@ -46,10 +46,10 @@ colors: 'red', 'blue', 'green', 'yellow', 'purple'
 
 #### Game State Updates (may repeat)
 **Server → Detectives**\
-[gameState] { players: [{ color: color, station_id: number, available_transport: {taxi: number, bus: number, underground: number} }], mister_x: {station_id: number | undefined, abilities: {hidden: number, double: number}, moves: ('taxi' | 'bus' | 'underground' | 'hidden')[] } }
+[gameState] { players: [{ color: color, station_id: number, available_transport: {taxi: number, bus: number, underground: number} }], mister_x: {station_id: number | undefined, abilities: {hidden: number, double: number}, moves: ('taxi' | 'bus' | 'underground' | 'hidden')[] }, round: number }
 
 **Server → MisterX**\
-[gameState] { players: [{ color: color, station_id: number, available_transport: {taxi: number, bus: number, underground: number} }], mister_x: {station_id: number, abilities: {hidden: number, double: number}, moves: ('taxi' | 'bus' | 'underground' | 'hidden')[] }}
+[gameState] { players: [{ color: color, station_id: number, available_transport: {taxi: number, bus: number, underground: number} }], mister_x: {station_id: number, abilities: {hidden: number, double: number}, moves: ('taxi' | 'bus' | 'underground' | 'hidden')[] }, round: number}
 
 #### Player Move
 **Detective → Server**\

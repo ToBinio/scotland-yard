@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum Role {
     Detective,
@@ -16,7 +16,7 @@ pub enum MisterXActionType {
     Hidden,
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum DetectiveActionType {
     Taxi,
@@ -55,6 +55,7 @@ pub struct MisterXAbilityData {
 pub struct GameState {
     pub players: Vec<DetectiveData>,
     pub mister_x: MisterXData,
+    pub round: u8,
 }
 
 #[allow(async_fn_in_trait)]
