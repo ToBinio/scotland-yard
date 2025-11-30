@@ -1,8 +1,9 @@
 use std::sync::LazyLock;
 
+use game::data::StationType;
 use rand::seq::SliceRandom;
 
-use crate::services::data::{Connection, DataServiceTrait, Round, Station, StationType};
+use crate::services::data::{Connection, DataServiceTrait, Round, Station};
 
 static STATIONS: LazyLock<Vec<Station>> = LazyLock::new(|| {
     let string = include_str!("../../../data/stations.txt");

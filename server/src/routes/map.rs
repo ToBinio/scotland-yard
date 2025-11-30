@@ -1,9 +1,7 @@
 use axum::{Router, extract::State, routing::get};
+use game::data::{Connection, Round, Station};
 
-use crate::{
-    AppState,
-    services::data::{Connection, DataServiceHandle, Round, Station},
-};
+use crate::{AppState, services::data::DataServiceHandle};
 
 use axum::Json;
 

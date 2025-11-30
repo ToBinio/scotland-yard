@@ -3,10 +3,11 @@
 use std::{sync::Arc, vec};
 
 use axum_test::TestServer;
+use game::data::{Connection, Round, Station, StationType};
 use server::{
     app,
     services::data::{
-        Connection, DataServiceTrait, Round, Station, StationType,
+        DataServiceTrait,
         service::{self},
     },
 };

@@ -386,6 +386,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "game"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -725,6 +735,7 @@ checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 name = "packets"
 version = "0.1.0"
 dependencies = [
+ "game",
  "serde",
  "serde_json",
  "thiserror",
@@ -949,6 +960,7 @@ dependencies = [
  "dotenv",
  "futures",
  "futures-util",
+ "game",
  "itertools",
  "packets",
  "rand",

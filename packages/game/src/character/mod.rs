@@ -1,4 +1,4 @@
-use crate::services::data::StationType;
+use crate::data::StationType;
 
 pub mod detective;
 pub mod mister_x;

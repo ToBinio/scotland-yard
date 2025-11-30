@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 packets = { path = "../packages/packets" }
+game = { path = "../packages/game" }
 
 axum = { version = "0.8.4", features = ["macros", "ws"] }
 

@@ -1,8 +1,7 @@
-use packets::DetectiveActionType;
-
 use crate::{
-    game::character::{ActionTypeTrait, Character},
-    services::data::StationType,
+    character::{ActionTypeTrait, Character},
+    data::StationType,
+    event::DetectiveActionType,
 };
 
 pub struct Action {
@@ -70,9 +69,9 @@ impl Character for Detective {
 }
 
 impl Detective {
-    pub fn new(station_id: u8, color: &str) -> Self {
+    pub fn new(station_id: u8, color: String) -> Self {
         Self {
-            color: color.to_string(),
+            color,
             start_station_id: station_id,
             actions: Vec::new(),
         }

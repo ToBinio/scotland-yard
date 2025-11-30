@@ -9,16 +9,16 @@ use axum::{
     response::IntoResponse,
     routing::any,
 };
-use packets::{ClientPacket, GamePacket, Role, ServerPacket};
+use game::{Game, GameError, event::Role};
+use packets::{ClientPacket, GamePacket, ServerPacket};
 use thiserror::Error;
 use tokio::sync::mpsc::{self, Sender};
 use uuid::Uuid;
 
 use crate::{
     AppState,
-    game::{Game, GameError},
     services::{
-        game::{GameServiceError, GameServiceHandle},
+        game::{GameEventListener, GameServiceError, GameServiceHandle},
         lobby::{LobbyServiceError, LobbyServiceHandle},
         ws_connection::WsConnectionServiceHandle,
     },
@@ -176,8 +176,9 @@ impl Connection {
             .unwrap()
     }
 
-    fn assert_own_round(&self, game: &Game) -> Result<(), ConnectionError> {
+    fn assert_own_round(&self, game: &Game<GameEventListener>) -> Result<(), ConnectionError> {
         if game
+            .event_listener()
             .get_user_role(self.connection_id)
             .eq(game.active_role())
             .not()
@@ -188,16 +189,22 @@ impl Connection {
         Ok(())
     }
 
-    fn assert_detective(&self, game: &Game) -> Result<(), ConnectionError> {
-        if matches!(game.get_user_role(self.connection_id), Role::Detective) {
+    fn assert_detective(&self, game: &Game<GameEventListener>) -> Result<(), ConnectionError> {
+        if matches!(
+            game.event_listener().get_user_role(self.connection_id),
+            Role::Detective
+        ) {
             return Err(ConnectionError::NotAllowedForUser);
         }
 
         Ok(())
     }
 
-    fn assert_mister_x(&self, game: &Game) -> Result<(), ConnectionError> {
-        if matches!(game.get_user_role(self.connection_id), Role::MisterX) {
+    fn assert_mister_x(&self, game: &Game<GameEventListener>) -> Result<(), ConnectionError> {
+        if matches!(
+            game.event_listener().get_user_role(self.connection_id),
+            Role::MisterX
+        ) {
             return Err(ConnectionError::NotAllowedForUser);
         }
 
@@ -312,7 +319,7 @@ impl Connection {
                 drop(ref_game_service);
 
                 if ended {
-                    self.game_service.lock().await.close_game(game_id).await;
+                    self.game_service.lock().await.remove_game(game_id).await;
                 }
             }
         }

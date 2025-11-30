@@ -1,8 +1,7 @@
-use packets::MisterXActionType;
-
 use crate::{
-    game::character::{ActionTypeTrait, Character},
-    services::data::StationType,
+    character::{ActionTypeTrait, Character},
+    data::StationType,
+    event::MisterXActionType,
 };
 
 pub struct MoveData {

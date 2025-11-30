@@ -23,7 +23,6 @@ use crate::services::{
     ws_connection::{WsConnectionService, WsConnectionServiceHandle},
 };
 
-pub mod game;
 mod routes;
 pub mod services;
 

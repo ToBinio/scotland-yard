@@ -1,15 +1,9 @@
 use std::{error::Error, fmt::Display};
 
+use game::event::{DetectiveActionType, GameState, MisterXActionType, Role};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use thiserror::Error;
 use uuid::Uuid;
-
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum Role {
-    Detective,
-    MisterX,
-}
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ErrorPacket {
@@ -42,59 +36,9 @@ pub struct StartMovePacket {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
-pub struct DetectiveData {
-    pub color: String,
-    pub station_id: u8,
-    pub available_transport: DetectiveTransportData,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-pub struct DetectiveTransportData {
-    pub taxi: u8,
-    pub bus: u8,
-    pub underground: u8,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-pub struct MisterXData {
-    pub station_id: Option<u8>,
-    pub abilities: MisterXAbilityData,
-    pub moves: Vec<MisterXActionType>,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-pub struct MisterXAbilityData {
-    pub double_move: u8,
-    pub hidden: u8,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-pub struct GameStatePacket {
-    pub players: Vec<DetectiveData>,
-    pub mister_x: MisterXData,
-}
-
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum MisterXActionType {
-    Taxi,
-    Bus,
-    Underground,
-    Hidden,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
 pub struct MoveMisterXPacket {
     pub station_id: u8,
     pub transport_type: MisterXActionType,
-}
-
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum DetectiveActionType {
-    Taxi,
-    Bus,
-    Underground,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -115,7 +59,7 @@ pub enum ServerPacket {
     Game(GamePacket),
     GameStarted(GameStartedPacket),
     StartMove(StartMovePacket),
-    GameState(GameStatePacket),
+    GameState(GameState),
     EndMove,
     GameEnded(GameEndedPacket),
 }

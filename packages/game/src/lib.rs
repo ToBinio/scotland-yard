@@ -1,27 +1,23 @@
 use std::ops::Not;
 
-use packets::{DetectiveActionType, MisterXActionType, Role};
 use thiserror::Error;
-use uuid::Uuid;
-
-use packets::{
-    DetectiveData, DetectiveTransportData, GameEndedPacket, GameStartedPacket, GameStatePacket,
-    MisterXAbilityData, MisterXData, ServerPacket, StartMovePacket,
-};
 
 use crate::{
-    game::character::{
+    character::{
         ActionTypeTrait, Character,
         detective::{self, Detective},
         mister_x::{self, MisterX},
     },
-    services::{
-        data::DataServiceHandle,
-        lobby::{Player, PlayerId},
+    data::{Connection, Round},
+    event::{
+        DetectiveActionType, DetectiveData, DetectiveTransportData, EventListener, GameState,
+        MisterXAbilityData, MisterXActionType, MisterXData, Role,
     },
 };
 
-pub mod character;
+mod character;
+pub mod data;
+pub mod event;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum GameError {
@@ -31,34 +27,40 @@ pub enum GameError {
     NotAllMoved,
 }
 
-pub struct Game {
+pub struct Game<E: EventListener> {
     active_role: Role,
     game_round: u8,
 
-    data_service: DataServiceHandle,
+    connections: Vec<Connection>,
+    rounds: Vec<Round>,
 
-    detective_players: Vec<Player>,
     detectives: Vec<Detective>,
-    mister_x_player: Player,
     mister_x: MisterX,
+
+    event_listener: E,
 }
 
-impl Game {
+impl<E: EventListener> Game<E> {
     pub fn new(
-        detective_players: Vec<Player>,
-        detectives: Vec<Detective>,
-        mister_x_player: Player,
-        mister_x: MisterX,
-        data_service: DataServiceHandle,
-    ) -> Game {
+        detective_data: Vec<(String, u8)>,
+        mister_x_start_station: u8,
+        connections: Vec<Connection>,
+        rounds: Vec<Round>,
+        event_listener: E,
+    ) -> Game<E> {
+        let detectives = detective_data
+            .into_iter()
+            .map(|data| Detective::new(data.1, data.0))
+            .collect();
+
         Game {
             active_role: Role::MisterX,
             game_round: 0,
-            detective_players,
             detectives,
-            mister_x_player,
-            mister_x,
-            data_service,
+            mister_x: MisterX::new(mister_x_start_station),
+            event_listener,
+            connections,
+            rounds,
         }
     }
 
@@ -66,52 +68,23 @@ impl Game {
         &self.active_role
     }
 
+    pub fn event_listener(&self) -> &E {
+        &self.event_listener
+    }
+
     pub async fn start(&mut self) {
-        self.mister_x_player
-            .ws_sender
-            .send(ServerPacket::GameStarted(GameStartedPacket {
-                role: Role::MisterX,
-            }))
-            .await
-            .unwrap();
-
-        for player in &self.detective_players {
-            player
-                .ws_sender
-                .send(ServerPacket::GameStarted(GameStartedPacket {
-                    role: Role::Detective,
-                }))
-                .await
-                .unwrap();
-        }
-
+        self.event_listener.on_game_start().await;
         self.start_move(Role::MisterX).await;
     }
 
     pub async fn start_move(&mut self, role: Role) {
         self.active_role = role.clone();
-
-        let packet = StartMovePacket { role };
-
-        for player in &self.detective_players {
-            player
-                .ws_sender
-                .send(ServerPacket::StartMove(packet.clone()))
-                .await
-                .unwrap();
-        }
-
-        self.mister_x_player
-            .ws_sender
-            .send(ServerPacket::StartMove(packet))
-            .await
-            .unwrap();
-
+        self.event_listener.on_start_round(&role).await;
         self.send_game_state(self.should_show_mister_x()).await;
     }
 
     async fn send_game_state(&self, show_mister_x: bool) {
-        let mut packet = GameStatePacket {
+        let state = GameState {
             players: self
                 .detectives
                 .iter()
@@ -135,48 +108,16 @@ impl Game {
             },
         };
 
-        self.mister_x_player
-            .ws_sender
-            .send(ServerPacket::GameState(packet.clone()))
-            .await
-            .unwrap();
-
-        if show_mister_x.not() {
-            packet.mister_x.station_id = None;
-        }
-
-        for player in &self.detective_players {
-            player
-                .ws_sender
-                .send(ServerPacket::GameState(packet.clone()))
-                .await
-                .unwrap();
-        }
+        self.event_listener
+            .on_game_state_update(state, show_mister_x)
+            .await;
     }
 
     fn should_show_mister_x(&self) -> bool {
-        match self
-            .data_service
-            .get_all_rounds()
-            .get(self.game_round as usize)
-        {
+        match self.rounds.get(self.game_round as usize) {
             Some(round) => round.show_mister_x,
             None => false,
         }
-    }
-
-    pub fn all_players(&self) -> Vec<Uuid> {
-        let mut players = vec![];
-        players.extend(self.detective_players.iter().map(|player| player.uuid));
-        players.push(self.mister_x_player.uuid);
-        players
-    }
-
-    async fn send_all(&self, packet: ServerPacket) {
-        for player in &self.detective_players {
-            player.ws_sender.send(packet.clone()).await.unwrap();
-        }
-        self.mister_x_player.ws_sender.send(packet).await.unwrap();
     }
 
     pub fn move_mister_x(&mut self, moves: Vec<(u8, MisterXActionType)>) -> Result<(), GameError> {
@@ -301,7 +242,7 @@ impl Game {
             }
         };
 
-        self.send_all(ServerPacket::EndMove).await;
+        self.event_listener.on_end_move().await;
 
         if self
             .detectives
@@ -315,7 +256,7 @@ impl Game {
         match self.active_role {
             Role::Detective => {
                 self.game_round += 1;
-                if self.game_round as usize == self.data_service.get_all_rounds().len() {
+                if self.game_round as usize == self.rounds.len() {
                     self.end_game(Role::MisterX).await;
                     return Ok(true);
                 }
@@ -329,24 +270,12 @@ impl Game {
     }
 
     pub async fn end_game(&mut self, winner: Role) {
-        self.send_all(ServerPacket::GameEnded(GameEndedPacket { winner }))
-            .await;
-
+        self.event_listener.on_game_ended(&winner).await;
         self.send_game_state(true).await;
     }
 
-    pub fn get_user_role(&self, id: PlayerId) -> Role {
-        if self.mister_x_player.uuid == id {
-            Role::MisterX
-        } else {
-            Role::Detective
-        }
-    }
-
     fn has_connection(&self, from: u8, to: u8, action_type: &dyn ActionTypeTrait) -> bool {
-        let connections = self.data_service.get_all_connections();
-
-        connections
+        self.connections
             .iter()
             .filter(|connection| {
                 (connection.from == from && connection.to == to)
