@@ -1,0 +1,2 @@
+[workspace]
+members = ["server", "packages/game", "packages/map_utils","packages/packets", "bots/bot_random", "bots/runtime"]
