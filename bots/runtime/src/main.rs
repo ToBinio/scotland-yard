@@ -30,11 +30,8 @@ fn main() {
 
             let msg = connection.receive();
 
-            match msg {
-                ServerPacket::Game(game) => {
-                    println!("created Game with id: {:?}", game.id);
-                }
-                _ => {}
+            if let ServerPacket::Game(game) = msg {
+                println!("created Game with id: {:?}", game.id);
             }
         }
     }

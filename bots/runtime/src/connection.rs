@@ -30,7 +30,7 @@ impl Connection {
             let msg = self.socket.read().unwrap();
 
             if let Message::Text(text) = msg {
-                return ServerPacket::from(&text.to_string()).unwrap();
+                return ServerPacket::from(text.as_ref()).unwrap();
             }
         }
     }

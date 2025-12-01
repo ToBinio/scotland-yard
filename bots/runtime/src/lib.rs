@@ -114,9 +114,8 @@ fn join_game(connection: &mut connection::Connection, game_id: String) -> Role {
     connection.send(ClientPacket::StartGame);
 
     loop {
-        match connection.receive() {
-            ServerPacket::GameStarted(packet) => return packet.role,
-            _ => {}
+        if let ServerPacket::GameStarted(packet) = connection.receive() {
+            return packet.role;
         }
     }
 }
@@ -137,16 +136,14 @@ fn play_game<B: Bot>(bot: &mut B, connection: &mut connection::Connection, role:
                     Role::Detective => {
                         let action = bot.next_detective_move(&state);
 
-                        for action in action.moves {
-                            if let Some(action) = action {
-                                connection.send(ClientPacket::MoveDetective(
-                                    packets::MoveDetectivePacket {
-                                        color: action.color,
-                                        station_id: action.station,
-                                        transport_type: action.action_type,
-                                    },
-                                ));
-                            }
+                        for action in action.moves.into_iter().flatten() {
+                            connection.send(ClientPacket::MoveDetective(
+                                packets::MoveDetectivePacket {
+                                    color: action.color,
+                                    station_id: action.station,
+                                    transport_type: action.action_type,
+                                },
+                            ));
                         }
                     }
                     Role::MisterX => {

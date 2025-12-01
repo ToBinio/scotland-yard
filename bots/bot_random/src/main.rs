@@ -28,8 +28,8 @@ impl runtime::Bot for Bot {
 
         MisterXAction {
             first_move: runtime::MisterXMove {
-                station: station,
-                action_type: action_type,
+                station,
+                action_type,
             },
             second_move: None,
         }
