@@ -9,6 +9,8 @@ packets = { path = "../../packages/packets" }
 
 clap = { version = "4.5.53", features = ["derive"] }
 
+uuid = { version = "1.18.1", features = ["serde", "v4"] }
+
 tungstenite = "0.28.0"
 ureq = "3.1.4"
 

@@ -6,6 +6,7 @@ use game::{
     event::{DetectiveActionType, GameState, MisterXActionType, Role},
 };
 use packets::{ClientPacket, JoinGamePacket, ServerPacket};
+use serde::Serialize;
 
 pub mod connection;
 
@@ -90,6 +91,9 @@ struct Args {
     /// UUID of the game to join
     #[arg(short, long)]
     game_id: String,
+
+    #[arg(short, long)]
+    simple_output: bool,
 }
 
 pub fn run_from_cli<B: Bot>() {
@@ -100,10 +104,29 @@ pub fn run_from_cli<B: Bot>() {
     let mut connection = connection::Connection::new(&args.server);
 
     let role = join_game(&mut connection, args.game_id);
-    println!("game stared: playing as {:?}", role);
+    if args.simple_output.not() {
+        println!("game stared: playing as {:?}", role);
+    }
 
     let winner = play_game(&mut bot, &mut connection, &role);
-    println!("game ended: winner is {:?}", winner);
+    if args.simple_output {
+        #[derive(Serialize)]
+        struct Output {
+            winner: Role,
+            player: Role,
+        }
+
+        println!(
+            "{:?}",
+            serde_json::to_string(&Output {
+                winner,
+                player: role,
+            })
+            .unwrap()
+        );
+    } else {
+        println!("game ended: winner is {:?}", winner);
+    }
 }
 
 fn join_game(connection: &mut connection::Connection, game_id: String) -> Role {
