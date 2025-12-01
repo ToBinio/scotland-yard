@@ -64,7 +64,7 @@ pub struct MisterXMove {
 
 #[derive(Debug)]
 pub struct DetectiveAction {
-    pub moves: [DetectiveMove; 4],
+    pub moves: [Option<DetectiveMove>; 4],
 }
 
 #[derive(Debug)]
@@ -138,13 +138,15 @@ fn play_game<B: Bot>(bot: &mut B, connection: &mut connection::Connection, role:
                         let action = bot.next_detective_move(&state);
 
                         for action in action.moves {
-                            connection.send(ClientPacket::MoveDetective(
-                                packets::MoveDetectivePacket {
-                                    color: action.color,
-                                    station_id: action.station,
-                                    transport_type: action.action_type,
-                                },
-                            ));
+                            if let Some(action) = action {
+                                connection.send(ClientPacket::MoveDetective(
+                                    packets::MoveDetectivePacket {
+                                        color: action.color,
+                                        station_id: action.station,
+                                        transport_type: action.action_type,
+                                    },
+                                ));
+                            }
                         }
                     }
                     Role::MisterX => {

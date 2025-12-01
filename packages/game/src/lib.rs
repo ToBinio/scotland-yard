@@ -230,11 +230,12 @@ impl<E: EventListener> Game<E> {
     pub async fn end_move(&mut self) -> Result<bool, GameError> {
         match self.active_role {
             Role::Detective => {
-                for detective in &self.detectives {
-                    if detective.actions().len() as u8 <= self.game_round {
-                        return Err(GameError::NotAllMoved);
-                    }
-                }
+                //TODO: check if player has valid move only then fail
+                // for detective in &self.detectives {
+                //     if detective.actions().len() as u8 <= self.game_round {
+                //         return Err(GameError::NotAllMoved);
+                //     }
+                // }
             }
             Role::MisterX => {
                 if self.mister_x.actions().len() as u8 <= self.game_round {

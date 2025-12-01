@@ -46,13 +46,17 @@ impl runtime::Bot for Bot {
             );
 
             let mut rand = rand::rng();
-            let (station, action_type) = valid_moves.choose(&mut rand).unwrap().clone();
 
-            moves.push(runtime::DetectiveMove {
-                color: player.color.to_string(),
-                station,
-                action_type,
-            });
+            match valid_moves.choose(&mut rand) {
+                Some((station, action_type)) => {
+                    moves.push(Some(runtime::DetectiveMove {
+                        color: player.color.to_string(),
+                        station: *station,
+                        action_type: action_type.clone(),
+                    }));
+                }
+                None => moves.push(None),
+            }
         }
 
         DetectiveAction {
