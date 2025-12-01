@@ -1,8 +1,5 @@
-use game::{
-    data::Connection,
-    event::{DetectiveActionType, GameState, MisterXActionType},
-};
-use map_utils::all_taxi_connections;
+use game::{data::Connection, event::GameState};
+use map_utils::{all_valid_detective_moves, all_valid_mister_x_moves};
 use rand::seq::IndexedRandom;
 use runtime::{DetectiveAction, MisterXAction};
 
@@ -20,16 +17,19 @@ impl runtime::Bot for Bot {
     fn next_mister_x_move(&mut self, game_state: &GameState) -> runtime::MisterXAction {
         let current_location = game_state.mister_x.station_id.unwrap();
 
-        //todo: actually get all valid moves
-        let valid_moves = all_taxi_connections(&self.connections, current_location);
+        let valid_moves = all_valid_mister_x_moves(
+            &self.connections,
+            current_location,
+            &game_state.mister_x.abilities,
+        );
 
         let mut rand = rand::rng();
-        let station = valid_moves.choose(&mut rand).unwrap().clone();
+        let (station, action_type) = valid_moves.choose(&mut rand).unwrap().clone();
 
         MisterXAction {
             first_move: runtime::MisterXMove {
                 station: station,
-                action_type: MisterXActionType::Taxi,
+                action_type: action_type,
             },
             second_move: None,
         }
@@ -39,16 +39,19 @@ impl runtime::Bot for Bot {
         let mut moves = vec![];
 
         for player in &game_state.players {
-            //todo: actually get all valid moves
-            let valid_moves = all_taxi_connections(&self.connections, player.station_id);
+            let valid_moves = all_valid_detective_moves(
+                &self.connections,
+                player.station_id,
+                &player.available_transport,
+            );
 
             let mut rand = rand::rng();
-            let station = valid_moves.choose(&mut rand).unwrap().clone();
+            let (station, action_type) = valid_moves.choose(&mut rand).unwrap().clone();
 
             moves.push(runtime::DetectiveMove {
                 color: player.color.to_string(),
                 station,
-                action_type: DetectiveActionType::Taxi,
+                action_type,
             });
         }
 
