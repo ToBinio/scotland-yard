@@ -10,18 +10,30 @@ async fn shows_mister_x() {
     let state = game.full_move_mister_x(110).await;
     assert!(state.mister_x.station_id.is_none());
 
-    game.full_move_detectives(&colors, &[106, 107, 108, 109])
-        .await;
+    game.full_move_detectives(
+        &colors,
+        &[106, 107, 108, 109],
+        &["taxi", "bus", "bus", "taxi"],
+    )
+    .await;
     let state = game.full_move_mister_x(104).await;
     assert!(state.mister_x.station_id.is_none());
 
-    game.full_move_detectives(&colors, &[100, 101, 102, 103])
-        .await;
+    game.full_move_detectives(
+        &colors,
+        &[100, 101, 102, 103],
+        &["taxi", "bus", "bus", "taxi"],
+    )
+    .await;
     let state = game.full_move_mister_x(110).await;
     assert!(state.mister_x.station_id.is_some());
 
-    game.full_move_detectives(&colors, &[106, 107, 108, 109])
-        .await;
+    game.full_move_detectives(
+        &colors,
+        &[106, 107, 108, 109],
+        &["taxi", "bus", "bus", "taxi"],
+    )
+    .await;
     let state = game.full_move_mister_x(104).await;
     assert!(state.mister_x.station_id.is_none());
 }

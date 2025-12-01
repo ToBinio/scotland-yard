@@ -48,6 +48,6 @@ async fn correctly_starts_round() {
     );
 
     assert_eq!(message.mister_x.abilities.double_move, 2);
-    assert_eq!(message.mister_x.abilities.hidden, 2);
+    assert_eq!(message.mister_x.abilities.hidden, 5);
     assert_eq!(message.mister_x.moves.len(), 0);
 }

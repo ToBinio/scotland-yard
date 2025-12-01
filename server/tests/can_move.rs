@@ -300,7 +300,7 @@ async fn can_double_move() {
 
     assert_eq!(game_state.mister_x.moves, vec![Move::Taxi, Move::Hidden]);
     assert_eq!(game_state.mister_x.abilities.double_move, 1);
-    assert_eq!(game_state.mister_x.abilities.hidden, 1);
+    assert_eq!(game_state.mister_x.abilities.hidden, 4);
 }
 
 #[tokio::test]
@@ -333,7 +333,7 @@ async fn can_move_hidden() {
         .unwrap();
 
     assert_eq!(game_state.mister_x.moves, vec![Move::Hidden]);
-    assert_eq!(game_state.mister_x.abilities.hidden, 1);
+    assert_eq!(game_state.mister_x.abilities.hidden, 4);
 }
 
 #[tokio::test]

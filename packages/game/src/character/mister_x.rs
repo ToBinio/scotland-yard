@@ -102,7 +102,7 @@ impl MisterX {
             .filter(|step| step.eq(&MisterXActionType::Hidden))
             .count() as u8;
 
-        2 - count
+        5 - count
     }
 
     /// Returns number of aviable double moves

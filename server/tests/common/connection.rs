@@ -146,21 +146,45 @@ impl GameConnection {
             .unwrap()
     }
 
-    pub async fn full_move_detectives(&mut self, colors: &[String], stations: &[u8; 4]) -> Game {
+    pub async fn double_move(&mut self, colors: &[String]) {
+        self.full_move_mister_x(110).await;
+
+        self.full_move_detectives(
+            &colors,
+            &[106, 107, 108, 109],
+            &["taxi", "bus", "bus", "taxi"],
+        )
+        .await;
+        self.full_move_mister_x(104).await;
+
+        self.full_move_detectives(
+            &colors,
+            &[100, 101, 102, 103],
+            &["taxi", "bus", "bus", "taxi"],
+        )
+        .await;
+    }
+
+    pub async fn full_move_detectives(
+        &mut self,
+        colors: &[String],
+        stations: &[u8; 4],
+        transport: &[&str],
+    ) -> Game {
         #[derive(Debug, Deserialize)]
         struct EndMove;
 
         let _ = self
-            .send_detective_move(&colors[0], stations[0], "taxi")
+            .send_detective_move(&colors[0], stations[0], transport[0])
             .await;
         let _ = self
-            .send_detective_move(&colors[1], stations[1], "bus")
+            .send_detective_move(&colors[1], stations[1], transport[1])
             .await;
         let _ = self
-            .send_detective_move(&colors[2], stations[2], "bus")
+            .send_detective_move(&colors[2], stations[2], transport[2])
             .await;
         let _ = self
-            .send_detective_move(&colors[3], stations[3], "underground")
+            .send_detective_move(&colors[3], stations[3], transport[3])
             .await;
 
         send_message(&mut self.detective, "submitMove", None).await;

@@ -15,14 +15,33 @@ async fn mister_x_hidden() {
     let mut server = test_server();
     let (mut game, colors) = start_game_with_colors(&mut server).await;
 
+    for _ in 0..2 {
+        game.hidden_move_mister_x(110).await;
+
+        game.full_move_detectives(
+            &colors,
+            &[106, 107, 108, 109],
+            &["taxi", "bus", "bus", "taxi"],
+        )
+        .await;
+        game.hidden_move_mister_x(104).await;
+
+        game.full_move_detectives(
+            &colors,
+            &[100, 101, 102, 103],
+            &["taxi", "bus", "bus", "taxi"],
+        )
+        .await;
+    }
+
     game.hidden_move_mister_x(110).await;
 
-    game.full_move_detectives(&colors, &[106, 107, 108, 109])
-        .await;
-    game.hidden_move_mister_x(104).await;
-
-    game.full_move_detectives(&colors, &[100, 101, 102, 103])
-        .await;
+    game.full_move_detectives(
+        &colors,
+        &[106, 107, 108, 109],
+        &["taxi", "bus", "bus", "taxi"],
+    )
+    .await;
 
     send_message(
         &mut game.mister_x,
@@ -65,13 +84,20 @@ async fn mister_x_double() {
     let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     game.double_move_mister_x().await;
-
-    game.full_move_detectives(&colors, &[106, 107, 108, 109])
-        .await;
+    game.full_move_detectives(
+        &colors,
+        &[106, 107, 108, 109],
+        &["taxi", "bus", "bus", "taxi"],
+    )
+    .await;
     game.double_move_mister_x().await;
 
-    game.full_move_detectives(&colors, &[100, 101, 102, 103])
-        .await;
+    game.full_move_detectives(
+        &colors,
+        &[100, 101, 102, 103],
+        &["taxi", "bus", "bus", "taxi"],
+    )
+    .await;
 
     send_message(
         &mut game.mister_x,
@@ -113,22 +139,25 @@ async fn detective_undeground() {
     let mut server = test_server();
     let (mut game, colors) = start_game_with_colors(&mut server).await;
 
-    game.full_move_mister_x(110).await;
+    for _ in 0..2 {
+        game.full_move_mister_x(110).await;
 
-    game.full_move_detectives(&colors, &[106, 107, 108, 109])
+        game.full_move_detectives(
+            &colors,
+            &[106, 107, 108, 109],
+            &["taxi", "bus", "bus", "underground"],
+        )
         .await;
-    game.full_move_mister_x(104).await;
+        game.full_move_mister_x(104).await;
 
-    game.full_move_detectives(&colors, &[100, 101, 102, 103])
+        game.full_move_detectives(
+            &colors,
+            &[100, 101, 102, 103],
+            &["taxi", "bus", "bus", "underground"],
+        )
         .await;
-    game.full_move_mister_x(110).await;
+    }
 
-    game.full_move_detectives(&colors, &[106, 107, 108, 109])
-        .await;
-    game.full_move_mister_x(104).await;
-
-    game.full_move_detectives(&colors, &[100, 101, 102, 103])
-        .await;
     game.full_move_mister_x(110).await;
 
     send_message(
