@@ -1,6 +1,6 @@
 use std::process::Command;
 
-use clap::{Parser, Subcommand, builder::Str};
+use clap::{Parser, Subcommand};
 use packets::{ClientPacket, ServerPacket};
 use runtime::connection::Connection;
 use uuid::Uuid;
