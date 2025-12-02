@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     process::{Command, Stdio},
     thread,
 };
@@ -53,14 +54,30 @@ fn main() {
             bot_a,
             bot_b,
             count,
-        } => thread::scope(|s| {
-            for _ in 0..count {
-                s.spawn(|| {
-                    let winner = run_game(&server, &bot_a, &bot_b);
-                    println!("winner {:?}", winner);
-                });
+        } => {
+            let winners = thread::scope(|s| {
+                let handles: Vec<_> = (0..count)
+                    .map(|_| {
+                        s.spawn(|| {
+                            let winner = run_game(&server, &bot_a, &bot_b);
+                            winner
+                        })
+                    })
+                    .collect();
+
+                handles
+                    .into_iter()
+                    .map(|h| h.join().unwrap())
+                    .collect::<Vec<_>>()
+            });
+
+            let mut counts: HashMap<Role, usize> = HashMap::new();
+            for w in winners {
+                *counts.entry(w).or_insert(0) += 1;
             }
-        }),
+
+            println!("{:#?}", counts);
+        }
     }
 }
 
