@@ -13,6 +13,7 @@ use crate::{
         DetectiveActionType, DetectiveData, DetectiveTransportData, EventListener, GameState,
         MisterXAbilityData, MisterXActionType, MisterXData, Role,
     },
+    map_utils::all_valid_detective_moves,
 };
 
 mod character;
@@ -231,12 +232,23 @@ impl<E: EventListener> Game<E> {
     pub async fn end_move(&mut self) -> Result<bool, GameError> {
         match self.active_role {
             Role::Detective => {
-                //TODO: check if player has valid move only then fail
-                // for detective in &self.detectives {
-                //     if detective.actions().len() as u8 <= self.game_round {
-                //         return Err(GameError::NotAllMoved);
-                //     }
-                // }
+                for detective in &self.detectives {
+                    if detective.actions().len() as u8 <= self.game_round
+                        && all_valid_detective_moves(
+                            &self.connections,
+                            detective.station_id(),
+                            &DetectiveTransportData {
+                                taxi: detective.taxi(),
+                                bus: detective.bus(),
+                                underground: detective.underground(),
+                            },
+                        )
+                        .len()
+                            > 0
+                    {
+                        return Err(GameError::NotAllMoved);
+                    }
+                }
             }
             Role::MisterX => {
                 if self.mister_x.actions().len() as u8 <= self.game_round {
