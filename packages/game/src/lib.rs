@@ -18,6 +18,7 @@ use crate::{
 mod character;
 pub mod data;
 pub mod event;
+pub mod map_utils;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum GameError {

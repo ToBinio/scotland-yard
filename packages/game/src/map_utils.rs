@@ -1,4 +1,4 @@
-use game::{
+use crate::{
     data::{Connection, StationType},
     event::{DetectiveActionType, DetectiveTransportData, MisterXAbilityData, MisterXActionType},
 };

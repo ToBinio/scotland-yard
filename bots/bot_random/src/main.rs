@@ -1,5 +1,5 @@
+use game::map_utils::{all_valid_detective_moves, all_valid_mister_x_moves};
 use game::{data::Connection, event::GameState};
-use map_utils::{all_valid_detective_moves, all_valid_mister_x_moves};
 use rand::seq::IndexedRandom;
 use runtime::{DetectiveAction, MisterXAction};
 
