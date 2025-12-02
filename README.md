@@ -5,11 +5,11 @@
 
 # run bots
 
-start server
+start server\
 `just server run`
 
-create a game
-`just bots create-game`
+build the random-bot\
+`just bots build-random`
 
-next start 2 bots with the game-id
-`just bots run-random <game-id>`
+start a bot battle\
+`just bots run-battle` | `just bots run-battles`
