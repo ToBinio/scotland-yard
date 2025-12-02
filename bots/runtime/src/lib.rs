@@ -6,7 +6,7 @@ use game::{
     event::{DetectiveActionType, GameState, MisterXActionType, Role},
 };
 use packets::{ClientPacket, JoinGamePacket, ServerPacket};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 pub mod connection;
 
@@ -96,6 +96,12 @@ struct Args {
     simple_output: bool,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Output {
+    pub winner: Role,
+    pub player: Role,
+}
+
 pub fn run_from_cli<B: Bot>() {
     let args = Args::parse();
 
@@ -110,14 +116,8 @@ pub fn run_from_cli<B: Bot>() {
 
     let winner = play_game(&mut bot, &mut connection, &role);
     if args.simple_output {
-        #[derive(Serialize)]
-        struct Output {
-            winner: Role,
-            player: Role,
-        }
-
         println!(
-            "{:?}",
+            "{}",
             serde_json::to_string(&Output {
                 winner,
                 player: role,

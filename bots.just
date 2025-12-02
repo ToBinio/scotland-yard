@@ -13,3 +13,7 @@ create-game:
 [working-directory: 'bots/runtime']
 run-battle:
   cargo run -- run-game --server http://localhost:8081 --bot-a ../../target/release/bot_random --bot-b ../../target/release/bot_random
+
+[working-directory: 'bots/runtime']
+run-battles:
+  cargo run -- run-game --server http://localhost:8081 --bot-a ../../target/release/bot_random --bot-b ../../target/release/bot_random --count 100

@@ -1,8 +1,12 @@
-use std::process::Command;
+use std::{
+    process::{Command, Stdio},
+    thread,
+};
 
 use clap::{Parser, Subcommand};
+use game::event::Role;
 use packets::{ClientPacket, ServerPacket};
-use runtime::connection::Connection;
+use runtime::{Output, connection::Connection};
 use uuid::Uuid;
 
 #[derive(Parser, Debug)]
@@ -21,6 +25,9 @@ enum SubCommands {
     RunGame {
         #[arg(short, long)]
         server: String,
+
+        #[arg(short, long, default_value_t = 1)]
+        count: u8,
 
         #[arg(long)]
         bot_a: String,
@@ -45,29 +52,15 @@ fn main() {
             server,
             bot_a,
             bot_b,
-        } => {
-            let Some(id) = game_id(&server) else {
-                println!("failed to create game");
-                return;
-            };
-
-            let mut bot_a = Command::new(bot_a)
-                .args(["--server", &server])
-                .args(["--game-id", &id.to_string()])
-                .arg("--simple-output")
-                .spawn()
-                .expect("failed to spawn bot_a");
-
-            let mut bot_b = Command::new(bot_b)
-                .args(["--server", &server])
-                .args(["--game-id", &id.to_string()])
-                .arg("--simple-output")
-                .spawn()
-                .expect("failed to spawn bot_b");
-
-            bot_a.wait().expect("failed to wait for bot_a");
-            bot_b.wait().expect("failed to wait for bot_b");
-        }
+            count,
+        } => thread::scope(|s| {
+            for _ in 0..count {
+                s.spawn(|| {
+                    let winner = run_game(&server, &bot_a, &bot_b);
+                    println!("winner {:?}", winner);
+                });
+            }
+        }),
     }
 }
 
@@ -85,4 +78,41 @@ fn game_id(server: &str) -> Option<Uuid> {
     } else {
         None
     }
+}
+
+fn run_game(server: &str, bot_a: &str, bot_b: &str) -> Role {
+    let Some(id) = game_id(&server) else {
+        panic!("failed to create game");
+    };
+
+    let bot_a = Command::new(bot_a)
+        .args(["--server", &server])
+        .args(["--game-id", &id.to_string()])
+        .arg("--simple-output")
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn bot_a");
+
+    let bot_b = Command::new(bot_b)
+        .args(["--server", &server])
+        .args(["--game-id", &id.to_string()])
+        .arg("--simple-output")
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn bot_b");
+
+    let output_a = bot_a.wait_with_output().expect("failed to wait for bot_a");
+    let output_b = bot_b.wait_with_output().expect("failed to wait for bot_b");
+
+    let output_a = String::from_utf8_lossy(&output_a.stdout).trim().to_string();
+    let output_b = String::from_utf8_lossy(&output_b.stdout).trim().to_string();
+
+    let output_a = serde_json::from_str::<Output>(&output_a).unwrap();
+    let output_b = serde_json::from_str::<Output>(&output_b).unwrap();
+
+    if output_a.winner != output_b.winner {
+        panic!("diffrent winners detective")
+    }
+
+    output_a.winner
 }
