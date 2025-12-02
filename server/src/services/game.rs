@@ -19,6 +19,7 @@ use crate::services::{
 pub type GameId = Uuid;
 
 pub type GameServiceHandle = Arc<Mutex<GameService>>;
+pub type GameHandle = Arc<Mutex<Game<GameEventListener>>>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum GameServiceError {
@@ -119,7 +120,7 @@ impl EventListener for GameEventListener {
 }
 
 pub struct GameService {
-    games: HashMap<GameId, Game<GameEventListener>>,
+    games: HashMap<GameId, GameHandle>,
     data_service: DataServiceHandle,
     ws_connection_service: WsConnectionServiceHandle,
 }
@@ -179,15 +180,20 @@ impl GameService {
             event_list,
         );
 
-        self.games.insert(*lobby_id, game);
+        self.games.insert(*lobby_id, Arc::new(Mutex::new(game)));
 
         Ok(())
     }
 
     pub async fn remove_game(&mut self, game_id: &GameId) {
-        let game = self.get_game(game_id).unwrap();
-
-        for player in game.event_listener().all_players() {
+        for player in self
+            .get_game(game_id)
+            .unwrap()
+            .lock()
+            .await
+            .event_listener()
+            .all_players()
+        {
             let mut connections = self.ws_connection_service.lock().await;
             let _ = connections.set_game_id(player, None);
         }
@@ -195,16 +201,10 @@ impl GameService {
         self.games.remove(game_id);
     }
 
-    pub fn get_game(&self, game_id: &GameId) -> Result<&Game<GameEventListener>, GameServiceError> {
-        self.games.get(game_id).ok_or(GameServiceError::UnknownGame)
-    }
-
-    pub fn get_game_mut(
-        &mut self,
-        game_id: &GameId,
-    ) -> Result<&mut Game<GameEventListener>, GameServiceError> {
+    pub fn get_game(&self, game_id: &GameId) -> Result<GameHandle, GameServiceError> {
         self.games
-            .get_mut(game_id)
+            .get(game_id)
             .ok_or(GameServiceError::UnknownGame)
+            .cloned()
     }
 }

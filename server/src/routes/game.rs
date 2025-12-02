@@ -272,18 +272,19 @@ impl Connection {
 
                 ref_lobby_service.close_lobby(&lobby_id);
 
-                let mut ref_game_service = self.game_service.lock().await;
-                let game = ref_game_service.get_game_mut(&self.game_id().await.unwrap())?;
-                game.start().await;
+                let ref_game_service = self.game_service.lock().await;
+                let game = ref_game_service.get_game(&self.game_id().await.unwrap())?;
+                game.lock().await.start().await;
             }
             ClientPacket::MoveMisterX(packet) => {
                 self.assert_in_game().await?;
 
-                let mut ref_game_service = self.game_service.lock().await;
-                let game = ref_game_service.get_game_mut(&self.game_id().await.unwrap())?;
+                let ref_game_service = self.game_service.lock().await;
+                let game_ref = ref_game_service.get_game(&self.game_id().await.unwrap())?;
+                let mut game = game_ref.lock().await;
 
-                self.assert_own_round(game)?;
-                self.assert_detective(game)?;
+                self.assert_own_round(&game)?;
+                self.assert_detective(&game)?;
 
                 game.move_mister_x(
                     packet
@@ -295,11 +296,12 @@ impl Connection {
             ClientPacket::MoveDetective(packet) => {
                 self.assert_in_game().await?;
 
-                let mut ref_game_service = self.game_service.lock().await;
-                let game = ref_game_service.get_game_mut(&self.game_id().await.unwrap())?;
+                let ref_game_service = self.game_service.lock().await;
+                let game_ref = ref_game_service.get_game(&self.game_id().await.unwrap())?;
+                let mut game = game_ref.lock().await;
 
-                self.assert_own_round(game)?;
-                self.assert_mister_x(game)?;
+                self.assert_own_round(&game)?;
+                self.assert_mister_x(&game)?;
 
                 game.move_detective(packet.color, packet.station_id, packet.transport_type)
                     .await?;
@@ -308,13 +310,15 @@ impl Connection {
                 self.assert_in_game().await?;
 
                 let game_id = &self.game_id().await.unwrap();
-                let mut ref_game_service = self.game_service.lock().await;
-                let game = ref_game_service.get_game_mut(game_id)?;
+                let ref_game_service = self.game_service.lock().await;
+                let game_ref = ref_game_service.get_game(&self.game_id().await.unwrap())?;
+                let mut game = game_ref.lock().await;
 
-                self.assert_own_round(game)?;
+                self.assert_own_round(&game)?;
 
                 let ended = game.end_move().await?;
                 drop(ref_game_service);
+                drop(game);
 
                 if ended {
                     self.game_service.lock().await.remove_game(game_id).await;
