@@ -9,13 +9,22 @@ const { data: connections } = await useFetch<Connection[]>(
   "http://localhost:8081/map/connections",
 );
 
+const sorted_connections = computed(() => {
+  return connections.value.sort(
+    (a, b) => mode_data[a.mode].index - mode_data[b.mode].index,
+  );
+});
+
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 
-const colors: Record<string, string> = {
-  taxi: "yellow",
-  bus: "green",
-  underground: "red",
-  water: "blue",
+const mode_data: Record<
+  string,
+  { color: string; width: number; index: number }
+> = {
+  taxi: { color: "yellow", width: 2, index: 2 },
+  bus: { color: "green", width: 6, index: 1 },
+  underground: { color: "red", width: 12, index: 0 },
+  water: { color: "blue", width: 4, index: 3 },
 };
 
 let zoom = 1;
@@ -28,18 +37,14 @@ let dragStartY = 0;
 
 const STATION_DISTANCE = 20;
 
-function resizeCanvas() {
-  const rect = canvasRef.value!.getBoundingClientRect();
-  canvasRef.value!.width = rect.width;
-  canvasRef.value!.height = rect.height;
-
-  console.log("hi");
-
-  draw();
-}
-
 function draw() {
-  if (!canvasRef.value || !stations || !connections) return;
+  if (
+    !canvasRef.value ||
+    !stations.value ||
+    !connections.value ||
+    !sorted_connections.value
+  )
+    return;
   const ctx = canvasRef.value.getContext("2d");
   if (!ctx) return;
 
@@ -50,20 +55,20 @@ function draw() {
   ctx.translate(offsetX, offsetY);
   ctx.scale(zoom, zoom);
 
-  connections.value!.forEach((conn) => {
+  for (const conn of sorted_connections.value!) {
     const fromStation = stations.value!.find((s) => s.id === conn.from);
     const toStation = stations.value!.find((s) => s.id === conn.to);
     if (!fromStation || !toStation) return;
 
-    ctx.strokeStyle = colors[conn.mode]!;
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = mode_data[conn.mode].color;
+    ctx.lineWidth = mode_data[conn.mode].width;
     ctx.beginPath();
     ctx.moveTo(fromStation.pos_x, fromStation.pos_y);
     ctx.lineTo(toStation.pos_x, toStation.pos_y);
     ctx.stroke();
-  });
+  }
 
-  stations.value!.forEach((station) => {
+  for (const station of stations.value!) {
     ctx.fillStyle = "black";
     ctx.beginPath();
     ctx.arc(station.pos_x, station.pos_y, STATION_DISTANCE, 0, Math.PI * 2);
@@ -74,13 +79,12 @@ function draw() {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(station.id.toString(), station.pos_x, station.pos_y);
-  });
+  }
 
   ctx.restore();
 }
 
 onMounted(() => {
-  draw();
   let observer = new ResizeObserver(() => {
     resizeCanvas();
   });
@@ -89,6 +93,14 @@ onMounted(() => {
   resizeCanvas();
 });
 watch([stations, connections], () => draw());
+
+function resizeCanvas() {
+  const rect = canvasRef.value!.getBoundingClientRect();
+  canvasRef.value!.width = rect.width;
+  canvasRef.value!.height = rect.height;
+
+  draw();
+}
 
 function onWheel(event: WheelEvent) {
   const rect = canvasRef.value!.getBoundingClientRect();
