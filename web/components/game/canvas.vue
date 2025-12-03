@@ -10,6 +10,8 @@
 	);
 
 	const sorted_connections = computed(() => {
+		if (!connections.value) return [];
+
 		return connections.value.sort(
 			(a, b) => mode_data[a.mode].index - mode_data[b.mode].index,
 		);
@@ -18,7 +20,7 @@
 	const canvasRef = ref<HTMLCanvasElement | null>(null);
 
 	const mode_data: Record<
-		string,
+		"taxi" | "bus" | "underground" | "water",
 		{ color: string; width: number; index: number }
 	> = {
 		taxi: { color: "yellow", width: 2, index: 2 },
@@ -85,16 +87,20 @@
 	}
 
 	onMounted(() => {
-		const observer = new ResizeObserver(() => {
-			resizeCanvas();
-		});
-		observer.observe(canvasRef.value);
+		if (canvasRef.value) {
+			const observer = new ResizeObserver(() => {
+				resizeCanvas();
+			});
+			observer.observe(canvasRef.value);
+		}
 
 		resizeCanvas();
 	});
 	watch([stations, connections], () => draw());
 
 	function resizeCanvas() {
+		if (!canvasRef.value) return;
+
 		const rect = canvasRef.value!.getBoundingClientRect();
 		canvasRef.value!.width = rect.width;
 		canvasRef.value!.height = rect.height;
@@ -155,13 +161,6 @@
 	function onStationClick(id: number) {
 		console.log("Station geklickt:", id);
 	}
-
-	const { data, send } = useGameConnection();
-
-	watch(data, (data) => {
-		console.log("new message:", data);
-	});
-	send("createGame", { number_of_detectives: 4 });
 </script>
 
 <template>
