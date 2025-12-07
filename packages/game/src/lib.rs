@@ -243,8 +243,8 @@ impl<E: EventListener> Game<E> {
                                 underground: detective.underground(),
                             },
                         )
-                        .len()
-                            > 0
+                        .is_empty()
+                        .not()
                     {
                         return Err(GameError::NotAllMoved);
                     }

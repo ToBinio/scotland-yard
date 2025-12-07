@@ -57,12 +57,7 @@ fn main() {
         } => {
             let winners = thread::scope(|s| {
                 let handles: Vec<_> = (0..count)
-                    .map(|_| {
-                        s.spawn(|| {
-                            let winner = run_game(&server, &bot_a, &bot_b);
-                            winner
-                        })
-                    })
+                    .map(|_| s.spawn(|| run_game(&server, &bot_a, &bot_b)))
                     .collect();
 
                 handles
@@ -98,12 +93,12 @@ fn game_id(server: &str) -> Option<Uuid> {
 }
 
 fn run_game(server: &str, bot_a: &str, bot_b: &str) -> Role {
-    let Some(id) = game_id(&server) else {
+    let Some(id) = game_id(server) else {
         panic!("failed to create game");
     };
 
     let bot_a = Command::new(bot_a)
-        .args(["--server", &server])
+        .args(["--server", server])
         .args(["--game-id", &id.to_string()])
         .arg("--simple-output")
         .stdout(Stdio::piped())
@@ -111,7 +106,7 @@ fn run_game(server: &str, bot_a: &str, bot_b: &str) -> Role {
         .expect("failed to spawn bot_a");
 
     let bot_b = Command::new(bot_b)
-        .args(["--server", &server])
+        .args(["--server", server])
         .args(["--game-id", &id.to_string()])
         .arg("--simple-output")
         .stdout(Stdio::piped())
