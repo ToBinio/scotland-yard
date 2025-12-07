@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 game = { path = "../game" }
+packets_derive = { path = "../packets_derive" }
 
 uuid = { version = "1.18.1", features = ["serde", "v4"] }
 

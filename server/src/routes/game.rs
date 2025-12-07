@@ -77,7 +77,7 @@ async fn handle_socket(
 
             while let Some(Ok(msg)) = ws_receiver.next().await {
                 let packet = match msg {
-                    Message::Text(t) => ClientPacket::from(t.as_str()),
+                    Message::Text(t) => ClientPacket::from_string(t.as_str()),
                     Message::Close(_) => {
                         break;
                     }

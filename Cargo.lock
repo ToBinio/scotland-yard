@@ -914,10 +914,20 @@ name = "packets"
 version = "0.1.0"
 dependencies = [
  "game",
+ "packets_derive",
  "serde",
  "serde_json",
  "thiserror",
  "uuid",
+]
+
+[[package]]
+name = "packets_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

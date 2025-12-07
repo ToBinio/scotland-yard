@@ -1,6 +1,7 @@
 use std::{error::Error, fmt::Display};
 
 use game::event::{DetectiveActionType, GameState, MisterXActionType, Role};
+use packets_derive::Packets;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use thiserror::Error;
 use uuid::Uuid;
@@ -53,7 +54,15 @@ pub struct GameEndedPacket {
     pub winner: Role,
 }
 
-#[derive(Clone)]
+#[derive(Error, Debug, PartialEq)]
+pub enum PacketError {
+    #[error("unknown packet")]
+    UnknownPacket,
+    #[error("invalid packet")]
+    InvalidPacket,
+}
+
+#[derive(Packets, Clone)]
 pub enum ServerPacket {
     Error(ErrorPacket),
     Game(GamePacket),
@@ -64,78 +73,6 @@ pub enum ServerPacket {
     GameEnded(GameEndedPacket),
 }
 
-pub enum ClientPacket {
-    CreateGame(CreateGamePacket),
-    JoinGame(JoinGamePacket),
-    StartGame,
-    MoveMisterX(Vec<MoveMisterXPacket>),
-    MoveDetective(MoveDetectivePacket),
-    SubmitMove,
-}
-
-#[derive(Error, Debug, PartialEq)]
-pub enum PacketError {
-    #[error("unknown packet")]
-    UnknownPacket,
-    #[error("invalid packet")]
-    InvalidPacket,
-}
-
-impl Display for ServerPacket {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let (name, content) = match self {
-            ServerPacket::Error(content) => {
-                ("error", Some(serde_json::to_string(content).unwrap()))
-            }
-            ServerPacket::Game(content) => ("game", Some(serde_json::to_string(content).unwrap())),
-            ServerPacket::GameStarted(content) => {
-                ("gameStarted", Some(serde_json::to_string(content).unwrap()))
-            }
-            ServerPacket::StartMove(content) => {
-                ("startMove", Some(serde_json::to_string(content).unwrap()))
-            }
-            ServerPacket::GameState(content) => {
-                ("gameState", Some(serde_json::to_string(content).unwrap()))
-            }
-            ServerPacket::EndMove => ("endMove", None),
-            ServerPacket::GameEnded(content) => {
-                ("gameEnded", Some(serde_json::to_string(content).unwrap()))
-            }
-        };
-
-        if let Some(content) = content {
-            f.write_fmt(format_args!("[{}] {}", name, content))
-        } else {
-            f.write_fmt(format_args!("[{}]", name))
-        }
-    }
-}
-
-impl ServerPacket {
-    pub fn from(message: &str) -> Result<ServerPacket, PacketError> {
-        let mut split = message.splitn(2, " ");
-
-        let name = split.next().unwrap().to_string();
-        let content = split.next().map(|content| content.to_string());
-
-        fn get_content<T: DeserializeOwned>(content: Option<String>) -> Result<T, PacketError> {
-            serde_json::from_str(&content.ok_or(PacketError::InvalidPacket)?)
-                .map_err(|_| PacketError::InvalidPacket)
-        }
-
-        match name.as_str() {
-            "[error]" => Ok(ServerPacket::Error(get_content(content)?)),
-            "[game]" => Ok(ServerPacket::Game(get_content(content)?)),
-            "[gameStarted]" => Ok(ServerPacket::GameStarted(get_content(content)?)),
-            "[startMove]" => Ok(ServerPacket::StartMove(get_content(content)?)),
-            "[gameState]" => Ok(ServerPacket::GameState(get_content(content)?)),
-            "[endMove]" => Ok(ServerPacket::EndMove),
-            "[gameEnded]" => Ok(ServerPacket::GameEnded(get_content(content)?)),
-            _ => Err(PacketError::UnknownPacket),
-        }
-    }
-}
-
 impl ServerPacket {
     pub fn from_error(err: impl Error) -> ServerPacket {
         ServerPacket::Error(ErrorPacket {
@@ -144,54 +81,12 @@ impl ServerPacket {
     }
 }
 
-impl ClientPacket {
-    pub fn from(message: &str) -> Result<ClientPacket, PacketError> {
-        let mut split = message.splitn(2, " ");
-
-        let name = split.next().unwrap().to_string();
-        let content = split.next().map(|content| content.to_string());
-
-        fn get_content<T: DeserializeOwned>(content: Option<String>) -> Result<T, PacketError> {
-            serde_json::from_str(&content.ok_or(PacketError::InvalidPacket)?)
-                .map_err(|_| PacketError::InvalidPacket)
-        }
-
-        match name.as_str() {
-            "[createGame]" => Ok(ClientPacket::CreateGame(get_content(content)?)),
-            "[joinGame]" => Ok(ClientPacket::JoinGame(get_content(content)?)),
-            "[startGame]" => Ok(ClientPacket::StartGame),
-            "[moveMisterX]" => Ok(ClientPacket::MoveMisterX(get_content(content)?)),
-            "[moveDetective]" => Ok(ClientPacket::MoveDetective(get_content(content)?)),
-            "[submitMove]" => Ok(ClientPacket::SubmitMove),
-            _ => Err(PacketError::UnknownPacket),
-        }
-    }
-}
-
-impl Display for ClientPacket {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let (name, content) = match self {
-            ClientPacket::StartGame => ("startGame", None),
-            ClientPacket::MoveMisterX(content) => {
-                ("moveMisterX", Some(serde_json::to_string(content).unwrap()))
-            }
-            ClientPacket::MoveDetective(content) => (
-                "moveDetective",
-                Some(serde_json::to_string(content).unwrap()),
-            ),
-            ClientPacket::SubmitMove => ("submitMove", None),
-            ClientPacket::CreateGame(content) => {
-                ("createGame", Some(serde_json::to_string(content).unwrap()))
-            }
-            ClientPacket::JoinGame(content) => {
-                ("joinGame", Some(serde_json::to_string(content).unwrap()))
-            }
-        };
-
-        if let Some(content) = content {
-            f.write_fmt(format_args!("[{}] {}", name, content))
-        } else {
-            f.write_fmt(format_args!("[{}]", name))
-        }
-    }
+#[derive(Packets, Clone)]
+pub enum ClientPacket {
+    CreateGame(CreateGamePacket),
+    JoinGame(JoinGamePacket),
+    StartGame,
+    MoveMisterX(Vec<MoveMisterXPacket>),
+    MoveDetective(MoveDetectivePacket),
+    SubmitMove,
 }
