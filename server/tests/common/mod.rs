@@ -149,7 +149,7 @@ impl DataServiceTrait for DataService {
         ["red", "blue", "green", "yellow", "purple"]
     }
 
-    fn get_random_stations(&self, count: usize) -> Vec<u8> {
+    fn get_random_detective_stations(&self, count: usize) -> Vec<u8> {
         let mut stations = vec![];
 
         for i in 0..(count as u8) {
@@ -157,5 +157,9 @@ impl DataServiceTrait for DataService {
         }
 
         stations
+    }
+
+    fn get_random_mister_x_station(&self) -> u8 {
+        104
     }
 }

@@ -1,7 +1,7 @@
 use std::sync::LazyLock;
 
 use game::data::StationType;
-use rand::seq::SliceRandom;
+use rand::seq::IndexedRandom;
 
 use crate::services::data::{Connection, DataServiceTrait, Round, Station};
 
@@ -77,14 +77,17 @@ impl DataServiceTrait for DataService {
         ["red", "blue", "green", "yellow", "purple"]
     }
 
-    fn get_random_stations(&self, count: usize) -> Vec<u8> {
+    fn get_random_detective_stations(&self, count: usize) -> Vec<u8> {
         let mut rng = rand::rng();
-        let mut stations = self.get_all_stations();
-        stations.shuffle(&mut rng);
-        stations
-            .into_iter()
-            .take(count)
-            .map(|station| station.id)
-            .collect()
+        const STATIONS: &[u8] = &[
+            13, 26, 29, 91, 117, 34, 50, 53, 94, 103, 112, 123, 138, 141, 155, 174,
+        ];
+        STATIONS.choose_multiple(&mut rng, count).copied().collect()
+    }
+
+    fn get_random_mister_x_station(&self) -> u8 {
+        let mut rng = rand::rng();
+        const STATIONS: &[u8] = &[166, 132, 127, 104, 35, 170, 78, 172, 51, 106, 45, 71, 146];
+        *STATIONS.choose(&mut rng).unwrap()
     }
 }

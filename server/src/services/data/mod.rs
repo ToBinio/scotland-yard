@@ -11,5 +11,6 @@ pub trait DataServiceTrait: Send + Sync {
     fn get_all_connections(&self) -> Vec<Connection>;
     fn get_all_rounds(&self) -> Vec<Round>;
     fn get_colors(&self) -> [&str; 5];
-    fn get_random_stations(&self, count: usize) -> Vec<u8>;
+    fn get_random_detective_stations(&self, count: usize) -> Vec<u8>;
+    fn get_random_mister_x_station(&self) -> u8;
 }

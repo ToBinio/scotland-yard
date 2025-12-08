@@ -151,9 +151,9 @@ impl GameService {
         let mister_x = rng.random_range(0..lobby.players.len());
 
         let colors = self.data_service.get_colors();
-        let starting_stations = self
+        let detective_starts = self
             .data_service
-            .get_random_stations(lobby.settings.number_of_detectives + 1);
+            .get_random_detective_stations(lobby.settings.number_of_detectives);
 
         let detective_players = lobby
             .players
@@ -169,12 +169,12 @@ impl GameService {
         };
 
         let detectives_data = (0..lobby.settings.number_of_detectives)
-            .map(|i| (colors[i].to_string(), starting_stations[i]))
+            .map(|i| (colors[i].to_string(), detective_starts[i]))
             .collect();
 
         let game = Game::new(
             detectives_data,
-            *starting_stations.last().unwrap(),
+            self.data_service.get_random_mister_x_station(),
             self.data_service.get_all_connections(),
             self.data_service.get_all_rounds(),
             event_list,
