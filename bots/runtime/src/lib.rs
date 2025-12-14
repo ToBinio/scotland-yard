@@ -1,6 +1,6 @@
 use std::{ops::Not, vec};
 
-use clap::{Parser, command};
+use clap::Parser;
 use game::{
     data::{Connection, Round, Station},
     event::{DetectiveActionType, GameState, MisterXActionType, Role},

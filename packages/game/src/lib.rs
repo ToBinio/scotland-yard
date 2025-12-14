@@ -14,12 +14,14 @@ use crate::{
         MisterXAbilityData, MisterXActionType, MisterXData, Role,
     },
     map_utils::all_valid_detective_moves,
+    replay::Replay,
 };
 
 mod character;
 pub mod data;
 pub mod event;
 pub mod map_utils;
+pub mod replay;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum GameError {
@@ -285,7 +287,42 @@ impl<E: EventListener> Game<E> {
     }
 
     pub async fn end_game(&mut self, winner: Role) {
-        self.event_listener.on_game_ended(&winner).await;
+        let max_actions = self
+            .detectives
+            .iter()
+            .map(|detective| detective.actions().len())
+            .max()
+            .unwrap_or(0);
+        let max_actions = max_actions.max(self.mister_x.actions().len());
+
+        let mut actions = vec![];
+        for i in 0..max_actions {
+            if let Some(action) = self.mister_x.actions().get(i) {
+                actions.push(replay::Action::MisterX(action.clone()));
+            }
+
+            for detective in &self.detectives {
+                if let Some(action) = detective.actions().get(i) {
+                    actions.push(replay::Action::Detective {
+                        color: detective.color().to_string(),
+                        action: action.clone(),
+                    });
+                }
+            }
+        }
+
+        let replay = Replay {
+            mister_x_starting_station: self.mister_x.start_station(),
+            detective_starting_stations: self
+                .detectives
+                .iter()
+                .map(|d| (d.color().to_string(), d.start_station()))
+                .collect(),
+            actions,
+            winner: winner.clone(),
+        };
+
+        self.event_listener.on_game_ended(&replay).await;
         self.send_game_state(true).await;
     }
 

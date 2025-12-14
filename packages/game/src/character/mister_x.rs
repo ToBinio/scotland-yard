@@ -1,14 +1,19 @@
+use serde::Serialize;
+
 use crate::{
     character::{ActionTypeTrait, Character},
     data::StationType,
     event::MisterXActionType,
 };
 
+#[derive(Debug, Clone, Serialize)]
 pub struct MoveData {
     pub station: u8,
     pub action_type: MisterXActionType,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Action {
     Single(MoveData),
     Double(MoveData, MoveData),
@@ -39,6 +44,10 @@ impl Character for MisterX {
 
     type ActionType = MisterXActionType;
 
+    fn start_station(&self) -> u8 {
+        self.start_station_id
+    }
+
     fn station_id(&self) -> u8 {
         match self.actions.last() {
             Some(step) => match step {
@@ -46,6 +55,15 @@ impl Character for MisterX {
                 Action::Double(_, step) => step.station,
             },
             None => self.start_station_id,
+        }
+    }
+
+    fn can_do_action(&self, action: &Self::ActionType) -> bool {
+        match action {
+            MisterXActionType::Taxi => true,
+            MisterXActionType::Bus => true,
+            MisterXActionType::Underground => true,
+            MisterXActionType::Hidden => self.hidden() > 0,
         }
     }
 
@@ -74,15 +92,6 @@ impl Character for MisterX {
 
     fn actions(&self) -> &Vec<Self::Action> {
         &self.actions
-    }
-
-    fn can_do_action(&self, action: &Self::ActionType) -> bool {
-        match action {
-            MisterXActionType::Taxi => true,
-            MisterXActionType::Bus => true,
-            MisterXActionType::Underground => true,
-            MisterXActionType::Hidden => self.hidden() > 0,
-        }
     }
 }
 

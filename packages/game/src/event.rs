@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::replay::Replay;
+
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq, Hash, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum Role {
@@ -7,7 +9,7 @@ pub enum Role {
     MisterX,
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum MisterXActionType {
     Taxi,
@@ -63,6 +65,6 @@ pub trait EventListener {
     async fn on_game_start(&self);
     async fn on_start_round(&self, role: &Role);
     async fn on_end_move(&self);
-    async fn on_game_ended(&self, role: &Role);
+    async fn on_game_ended(&self, replay: &Replay);
     async fn on_game_state_update(&self, state: GameState, show_mister_x: bool);
 }

@@ -9,7 +9,7 @@ game = { path = "../packages/game" }
 
 axum = { version = "0.8.4", features = ["macros", "ws"] }
 
-tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.47.1", features = ["fs", "macros", "rt-multi-thread"] }
 tower-http = { version = "0.6.6", features = ["cors", "tower", "trace"] }
 tower = { version = "0.5.2", features = ["util"] }
 

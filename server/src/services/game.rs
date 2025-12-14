@@ -3,11 +3,12 @@ use std::{collections::HashMap, sync::Arc};
 use game::{
     Game, GameError,
     event::{EventListener, GameState, Role},
+    replay::Replay,
 };
 use packets::{GameEndedPacket, GameStartedPacket, ServerPacket, StartMovePacket};
 use rand::Rng;
 use thiserror::Error;
-use tokio::sync::Mutex;
+use tokio::{fs, sync::Mutex};
 use uuid::Uuid;
 
 use crate::services::{
@@ -33,6 +34,7 @@ pub enum GameServiceError {
 }
 
 pub struct GameEventListener {
+    game_id: Uuid,
     detective_players: Vec<Player>,
     mister_x_player: Player,
 }
@@ -91,9 +93,17 @@ impl EventListener for GameEventListener {
         self.send_all(ServerPacket::EndMove).await;
     }
 
-    async fn on_game_ended(&self, role: &Role) {
+    async fn on_game_ended(&self, replay: &Replay) {
+        fs::create_dir_all("./replays").await.unwrap();
+        fs::write(
+            format!("./replays/{}.json", self.game_id),
+            serde_json::to_string_pretty(replay).unwrap(),
+        )
+        .await
+        .unwrap();
+
         self.send_all(ServerPacket::GameEnded(GameEndedPacket {
-            winner: role.clone(),
+            winner: replay.winner.clone(),
         }))
         .await;
     }
@@ -164,6 +174,7 @@ impl GameService {
             .collect();
 
         let event_list = GameEventListener {
+            game_id: *lobby_id,
             detective_players,
             mister_x_player: lobby.players[mister_x].clone(),
         };

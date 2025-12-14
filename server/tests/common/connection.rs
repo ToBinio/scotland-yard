@@ -150,7 +150,7 @@ impl GameConnection {
         self.full_move_mister_x(110).await;
 
         self.full_move_detectives(
-            &colors,
+            colors,
             &[106, 107, 108, 109],
             &["taxi", "bus", "bus", "taxi"],
         )
@@ -158,7 +158,7 @@ impl GameConnection {
         self.full_move_mister_x(104).await;
 
         self.full_move_detectives(
-            &colors,
+            colors,
             &[100, 101, 102, 103],
             &["taxi", "bus", "bus", "taxi"],
         )

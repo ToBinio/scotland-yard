@@ -7,6 +7,8 @@ pub trait Character {
     type Action;
     type ActionType: ActionTypeTrait;
 
+    fn start_station(&self) -> u8;
+
     fn station_id(&self) -> u8;
 
     fn can_do_action(&self, action: &Self::ActionType) -> bool;

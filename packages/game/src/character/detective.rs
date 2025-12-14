@@ -1,9 +1,12 @@
+use serde::Serialize;
+
 use crate::{
     character::{ActionTypeTrait, Character},
     data::StationType,
     event::DetectiveActionType,
 };
 
+#[derive(Debug, Clone, Serialize)]
 pub struct Action {
     pub station: u8,
     pub action_type: DetectiveActionType,
@@ -31,10 +34,22 @@ impl Character for Detective {
 
     type ActionType = DetectiveActionType;
 
+    fn start_station(&self) -> u8 {
+        self.start_station_id
+    }
+
     fn station_id(&self) -> u8 {
         match self.actions.last() {
             Some(step) => step.station,
             None => self.start_station_id,
+        }
+    }
+
+    fn can_do_action(&self, action: &Self::ActionType) -> bool {
+        match action {
+            DetectiveActionType::Taxi => self.taxi() > 0,
+            DetectiveActionType::Bus => self.bus() > 0,
+            DetectiveActionType::Underground => self.underground() > 0,
         }
     }
 
@@ -57,14 +72,6 @@ impl Character for Detective {
 
     fn actions(&self) -> &Vec<Self::Action> {
         &self.actions
-    }
-
-    fn can_do_action(&self, action: &Self::ActionType) -> bool {
-        match action {
-            DetectiveActionType::Taxi => self.taxi() > 0,
-            DetectiveActionType::Bus => self.bus() > 0,
-            DetectiveActionType::Underground => self.underground() > 0,
-        }
     }
 }
 
