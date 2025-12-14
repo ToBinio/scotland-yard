@@ -1,4 +1,4 @@
-use server::{app, services::data::service::DataService};
+use server::{Settings, app, services::data::service::DataService};
 use std::{env, sync::Arc};
 use tracing::info;
 
@@ -18,7 +18,15 @@ async fn main() {
 
     info!("listening on {}", listener.local_addr().unwrap());
 
-    axum::serve(listener, app(Arc::new(DataService)))
-        .await
-        .unwrap();
+    axum::serve(
+        listener,
+        app(
+            Arc::new(DataService),
+            Arc::new(Settings {
+                replay_dir: "./replays".into(),
+            }),
+        ),
+    )
+    .await
+    .unwrap();
 }

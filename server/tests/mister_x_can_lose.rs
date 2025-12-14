@@ -15,7 +15,7 @@ struct EndMove;
 
 #[tokio::test]
 async fn can_lose_after_detective_move() {
-    let mut server = test_server();
+    let (mut server, _dir) = test_server();
     let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     game.full_move_mister_x(110).await;
@@ -37,7 +37,7 @@ async fn can_lose_after_detective_move() {
 
 #[tokio::test]
 async fn can_lose_after_mister_x_move() {
-    let mut server = test_server();
+    let (mut server, _dir) = test_server();
     let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     send_message(

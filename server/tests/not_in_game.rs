@@ -11,7 +11,7 @@ mod common;
 
 #[tokio::test]
 async fn sends_error() {
-    let server = test_server();
+    let (server, _dir) = test_server();
     let mut player = get_ws_connection(&server).await;
 
     send_message(&mut player, "startGame", None).await;
@@ -42,7 +42,7 @@ struct EndMove;
 
 #[tokio::test]
 async fn sends_error_after_finished_game() {
-    let mut server = test_server();
+    let (mut server, _dir) = test_server();
     let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     game.full_move_mister_x(110).await;

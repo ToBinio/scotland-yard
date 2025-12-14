@@ -9,7 +9,7 @@ mod common;
 
 #[tokio::test]
 async fn can_connect() {
-    let server = test_server();
+    let (server, _dir) = test_server();
 
     let response = server.get_websocket("/game/ws").await;
 
@@ -18,7 +18,7 @@ async fn can_connect() {
 
 #[tokio::test]
 async fn handels_unknown_packet() {
-    let server = test_server();
+    let (server, _dir) = test_server();
 
     let mut player = get_ws_connection(&server).await;
 
@@ -28,7 +28,7 @@ async fn handels_unknown_packet() {
 
 #[tokio::test]
 async fn handels_invalid_packet() {
-    let server = test_server();
+    let (server, _dir) = test_server();
 
     let mut player = get_ws_connection(&server).await;
 

@@ -21,7 +21,7 @@ struct Connection {
 
 #[tokio::test]
 async fn get_connections() {
-    let server = test_prod_server();
+    let (server, _dir) = test_prod_server();
 
     let response = server.get("/map/connections").await;
 

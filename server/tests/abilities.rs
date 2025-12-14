@@ -12,7 +12,7 @@ mod common;
 
 #[tokio::test]
 async fn mister_x_hidden() {
-    let mut server = test_server();
+    let (mut server, _dir) = test_server();
     let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     for _ in 0..2 {
@@ -80,7 +80,7 @@ impl GameConnection {
 
 #[tokio::test]
 async fn mister_x_double() {
-    let mut server = test_server();
+    let (mut server, _dir) = test_server();
     let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     game.double_move_mister_x().await;
@@ -136,7 +136,7 @@ impl GameConnection {
 
 #[tokio::test]
 async fn detective_undeground() {
-    let mut server = test_server();
+    let (mut server, _dir) = test_server();
     let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     for _ in 0..2 {

@@ -13,7 +13,7 @@ struct EndMove;
 
 #[tokio::test]
 async fn can_lose() {
-    let mut server = test_server();
+    let (mut server, _dir) = test_server();
     let (mut game, colors) = start_game_with_colors(&mut server).await;
 
     for _ in 0..3 {

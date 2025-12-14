@@ -16,7 +16,7 @@ use tokio::sync::mpsc::{self, Sender};
 use uuid::Uuid;
 
 use crate::{
-    AppState,
+    AppState, SettingsHandle,
     services::{
         game::{GameEventListener, GameServiceError, GameServiceHandle},
         lobby::{LobbyServiceError, LobbyServiceHandle},
@@ -37,9 +37,16 @@ async fn ws_handler(
     State(lobby_service): State<LobbyServiceHandle>,
     State(game_service): State<GameServiceHandle>,
     State(ws_connection_service): State<WsConnectionServiceHandle>,
+    State(settings): State<SettingsHandle>,
 ) -> impl IntoResponse {
     ws.on_upgrade(|socket| {
-        handle_socket(socket, lobby_service, game_service, ws_connection_service)
+        handle_socket(
+            socket,
+            lobby_service,
+            game_service,
+            ws_connection_service,
+            settings,
+        )
     })
 }
 async fn handle_socket(
@@ -47,6 +54,7 @@ async fn handle_socket(
     lobby_service: LobbyServiceHandle,
     game_service: GameServiceHandle,
     ws_connection_service: WsConnectionServiceHandle,
+    settings: SettingsHandle,
 ) {
     let (mut ws_sender, mut ws_receiver) = socket.split();
 
@@ -73,6 +81,7 @@ async fn handle_socket(
                 lobby_service,
                 game_service,
                 ws_connection_service,
+                settings,
             };
 
             while let Some(Ok(msg)) = ws_receiver.next().await {
@@ -137,6 +146,7 @@ struct Connection {
     lobby_service: LobbyServiceHandle,
     game_service: GameServiceHandle,
     ws_connection_service: WsConnectionServiceHandle,
+    settings: SettingsHandle,
 }
 
 impl Connection {
@@ -258,10 +268,11 @@ impl Connection {
                 let mut ref_lobby_service = self.lobby_service.lock().await;
                 let lobby = ref_lobby_service.get_lobby(&lobby_id)?;
 
-                self.game_service
-                    .lock()
-                    .await
-                    .add_game_from_lobby(lobby, &lobby_id)?;
+                self.game_service.lock().await.add_game_from_lobby(
+                    lobby,
+                    &lobby_id,
+                    self.settings.clone(),
+                )?;
 
                 for player in &lobby.players {
                     let mut connections = self.ws_connection_service.lock().await;

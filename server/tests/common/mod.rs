@@ -5,25 +5,39 @@ use std::{sync::Arc, vec};
 use axum_test::TestServer;
 use game::data::{Connection, Round, Station, StationType};
 use server::{
-    app,
+    Settings, app,
     services::data::{
-        DataServiceTrait,
+        DataServiceHandle, DataServiceTrait,
         service::{self},
     },
 };
+use tempfile::TempDir;
 
 pub mod connection;
 pub mod data;
 pub mod ws;
 
-pub fn test_server() -> TestServer {
-    let app = app(Arc::new(DataService));
-    TestServer::builder().http_transport().build(app).unwrap()
+fn get_test_server(data_service: DataServiceHandle) -> (TestServer, TempDir) {
+    let path = TempDir::new().unwrap();
+
+    let app = app(
+        data_service,
+        Arc::new(Settings {
+            replay_dir: path.path().to_path_buf(),
+        }),
+    );
+    (
+        TestServer::builder().http_transport().build(app).unwrap(),
+        path,
+    )
 }
 
-pub fn test_prod_server() -> TestServer {
-    let app = app(Arc::new(service::DataService));
-    TestServer::builder().http_transport().build(app).unwrap()
+pub fn test_server() -> (TestServer, TempDir) {
+    get_test_server(Arc::new(DataService))
+}
+
+pub fn test_prod_server() -> (TestServer, TempDir) {
+    get_test_server(Arc::new(service::DataService))
 }
 
 struct DataService;

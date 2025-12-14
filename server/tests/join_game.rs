@@ -11,7 +11,7 @@ mod common;
 
 #[tokio::test]
 async fn can_start_game() {
-    let server = test_server();
+    let (server, _dir) = test_server();
 
     let mut player_1 = get_ws_connection(&server).await;
     let mut player_2 = get_ws_connection(&server).await;
@@ -45,7 +45,7 @@ async fn can_start_game() {
 
 #[tokio::test]
 async fn can_not_join_game_twice() {
-    let server = test_server();
+    let (server, _dir) = test_server();
 
     let mut player = get_ws_connection(&server).await;
     let game_id = create_game(&mut player).await;
@@ -58,7 +58,7 @@ async fn can_not_join_game_twice() {
 
 #[tokio::test]
 async fn can_not_join_unknown_game() {
-    let server = test_server();
+    let (server, _dir) = test_server();
 
     let mut player = get_ws_connection(&server).await;
 
@@ -74,7 +74,7 @@ async fn can_not_join_unknown_game() {
 
 #[tokio::test]
 async fn can_not_start_game_without_enough_players() {
-    let server = test_server();
+    let (server, _dir) = test_server();
 
     let mut player = get_ws_connection(&server).await;
     let game_id = create_game(&mut player).await;
@@ -88,7 +88,7 @@ async fn can_not_start_game_without_enough_players() {
 
 #[tokio::test]
 async fn can_not_join_started_game() {
-    let server = test_server();
+    let (server, _dir) = test_server();
 
     let mut player_1 = get_ws_connection(&server).await;
     let mut player_2 = get_ws_connection(&server).await;

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use axum::{
     Json, Router,
@@ -43,12 +43,19 @@ impl IntoResponse for AppError {
     }
 }
 
+pub struct Settings {
+    pub replay_dir: PathBuf,
+}
+
+pub type SettingsHandle = Arc<Settings>;
+
 #[derive(Clone)]
 pub struct AppState {
     data: DataServiceHandle,
     lobby: LobbyServiceHandle,
     game: GameServiceHandle,
     ws_connection: WsConnectionServiceHandle,
+    settings: SettingsHandle,
 }
 
 impl FromRef<AppState> for DataServiceHandle {
@@ -75,7 +82,13 @@ impl FromRef<AppState> for WsConnectionServiceHandle {
     }
 }
 
-pub fn app(data_service: DataServiceHandle) -> Router {
+impl FromRef<AppState> for SettingsHandle {
+    fn from_ref(input: &AppState) -> Self {
+        input.settings.clone()
+    }
+}
+
+pub fn app(data_service: DataServiceHandle, settings: SettingsHandle) -> Router {
     let cors_layer = CorsLayer::new()
         .allow_headers(Any)
         .allow_origin(Any)
@@ -91,6 +104,7 @@ pub fn app(data_service: DataServiceHandle) -> Router {
             data_service.clone(),
             ws_connection.clone(),
         ))),
+        settings: settings.clone(),
     };
 
     Router::new()

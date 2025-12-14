@@ -21,7 +21,7 @@ struct Station {
 
 #[tokio::test]
 async fn get_stations() {
-    let server = test_prod_server();
+    let (server, _dir) = test_prod_server();
 
     let response = server.get("/map/stations").await;
 

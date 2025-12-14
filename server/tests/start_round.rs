@@ -6,7 +6,7 @@ mod common;
 
 #[tokio::test]
 async fn correctly_starts_round() {
-    let mut server = test_server();
+    let (mut server, _dir) = test_server();
     let mut game = start_game(&mut server).await;
 
     #[derive(Debug, Deserialize)]

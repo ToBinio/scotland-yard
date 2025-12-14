@@ -11,10 +11,13 @@ use thiserror::Error;
 use tokio::{fs, sync::Mutex};
 use uuid::Uuid;
 
-use crate::services::{
-    data::DataServiceHandle,
-    lobby::{Lobby, LobbyId, Player},
-    ws_connection::WsConnectionServiceHandle,
+use crate::{
+    SettingsHandle,
+    services::{
+        data::DataServiceHandle,
+        lobby::{Lobby, LobbyId, Player},
+        ws_connection::WsConnectionServiceHandle,
+    },
 };
 
 pub type GameId = Uuid;
@@ -34,6 +37,7 @@ pub enum GameServiceError {
 }
 
 pub struct GameEventListener {
+    settings: SettingsHandle,
     game_id: Uuid,
     detective_players: Vec<Player>,
     mister_x_player: Player,
@@ -94,9 +98,11 @@ impl EventListener for GameEventListener {
     }
 
     async fn on_game_ended(&self, replay: &Replay) {
-        fs::create_dir_all("./replays").await.unwrap();
+        fs::create_dir_all(&self.settings.replay_dir).await.unwrap();
         fs::write(
-            format!("./replays/{}.json", self.game_id),
+            self.settings
+                .replay_dir
+                .join(format!("{}.json", self.game_id)),
             serde_json::to_string_pretty(replay).unwrap(),
         )
         .await
@@ -151,6 +157,7 @@ impl GameService {
         &mut self,
         lobby: &Lobby,
         lobby_id: &LobbyId,
+        settings: SettingsHandle,
     ) -> Result<(), GameServiceError> {
         if lobby.players.len() < 2 {
             return Err(GameServiceError::NotEnoughPlayers);
@@ -174,6 +181,7 @@ impl GameService {
             .collect();
 
         let event_list = GameEventListener {
+            settings,
             game_id: *lobby_id,
             detective_players,
             mister_x_player: lobby.players[mister_x].clone(),

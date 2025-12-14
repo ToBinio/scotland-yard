@@ -11,7 +11,7 @@ struct Round {
 
 #[tokio::test]
 async fn get_rounds() {
-    let server = test_prod_server();
+    let (server, _dir) = test_prod_server();
 
     let response = server.get("/map/rounds").await;
 
