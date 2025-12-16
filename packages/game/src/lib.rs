@@ -298,14 +298,30 @@ impl<E: EventListener> Game<E> {
         let mut actions = vec![];
         for i in 0..max_actions {
             if let Some(action) = self.mister_x.actions().get(i) {
-                actions.push(replay::Action::MisterX(action.clone()));
+                match action {
+                    mister_x::Action::Single(action) => actions.push(replay::Action::MisterX {
+                        station: action.station,
+                        action_type: action.action_type.clone(),
+                    }),
+                    mister_x::Action::Double(action1, action2) => {
+                        actions.push(replay::Action::MisterX {
+                            station: action1.station,
+                            action_type: action1.action_type.clone(),
+                        });
+                        actions.push(replay::Action::MisterX {
+                            station: action2.station,
+                            action_type: action2.action_type.clone(),
+                        });
+                    }
+                }
             }
 
             for detective in &self.detectives {
                 if let Some(action) = detective.actions().get(i) {
                     actions.push(replay::Action::Detective {
                         color: detective.color().to_string(),
-                        action: action.clone(),
+                        action_type: action.action_type.clone(),
+                        station: action.station,
                     });
                 }
             }

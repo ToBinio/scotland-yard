@@ -2,19 +2,20 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
-use crate::{
-    character::{detective, mister_x},
-    event::Role,
-};
+use crate::event::{DetectiveActionType, MisterXActionType, Role};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Action {
     Detective {
         color: String,
-        action: detective::Action,
+        station: u8,
+        action_type: DetectiveActionType,
     },
-    MisterX(mister_x::Action),
+    MisterX {
+        station: u8,
+        action_type: MisterXActionType,
+    },
 }
 
 #[derive(Debug, Clone, Serialize)]
