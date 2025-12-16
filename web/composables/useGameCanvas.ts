@@ -1,176 +1,229 @@
 import type { Connection, Station } from "~/utils/type/canvas";
 
 const MODE_DATA: Record<
-  "taxi" | "bus" | "underground" | "water",
-  { color: string; width: number; index: number }
+	"taxi" | "bus" | "underground" | "water",
+	{ color: string; width: number; index: number }
 > = {
-  taxi: { color: "yellow", width: 2, index: 2 },
-  bus: { color: "green", width: 6, index: 1 },
-  underground: { color: "red", width: 12, index: 0 },
-  water: { color: "blue", width: 4, index: 3 },
+	taxi: { color: "yellow", width: 2, index: 2 },
+	bus: { color: "green", width: 6, index: 1 },
+	underground: { color: "red", width: 12, index: 0 },
+	water: { color: "blue", width: 4, index: 3 },
 };
 
 const STATION_DISTANCE = 20;
 const MIDDLE_MOUSE_BUTTON = 1;
 
 export function useGameCanvas(canvasRef: Ref<HTMLCanvasElement | null>) {
-  const { data: stations } = useFetch<Station[]>(
-    "http://localhost:8081/map/stations",
-  );
+	const { data: stations } = useFetch<Station[]>(
+		"http://localhost:8081/map/stations",
+	);
 
-  const { data: connections } = useFetch<Connection[]>(
-    "http://localhost:8081/map/connections",
-  );
+	const { data: connections } = useFetch<Connection[]>(
+		"http://localhost:8081/map/connections",
+	);
 
-  const sorted_connections = computed(() => {
-    if (!connections.value) return [];
+	const sorted_connections = computed(() => {
+		if (!connections.value) return [];
 
-    return connections.value.sort(
-      (a, b) => MODE_DATA[a.mode].index - MODE_DATA[b.mode].index,
-    );
-  });
+		return connections.value.sort(
+			(a, b) => MODE_DATA[a.mode].index - MODE_DATA[b.mode].index,
+		);
+	});
 
-  let zoom = 1;
-  let offsetX = 0;
-  let offsetY = 0;
+	onMounted(() => {
+		if (canvasRef.value) {
+			const observer = new ResizeObserver(resizeCanvas);
+			observer.observe(canvasRef.value);
 
-  let isDragging = false;
-  let dragStartX = 0;
-  let dragStartY = 0;
+			canvasRef.value.addEventListener("wheel", onWheel);
+			canvasRef.value.addEventListener("mousedown", onMouseDown);
+			canvasRef.value.addEventListener("mousemove", onMouseMove);
+			canvasRef.value.addEventListener("mouseup", onMouseUp);
+			canvasRef.value.addEventListener("click", onClick);
+		}
 
-  function draw() {
-    if (
-      !canvasRef.value ||
-      !stations.value ||
-      !connections.value ||
-      !sorted_connections.value
-    )
-      return;
-    const ctx = canvasRef.value.getContext("2d");
-    if (!ctx) return;
+		resizeCanvas();
+	});
+	watch([stations, connections], () => draw());
 
-    ctx.save();
-    ctx.fillStyle = "lightblue";
-    ctx.fillRect(0, 0, canvasRef.value.width, canvasRef.value.height);
+	let zoom = 1;
+	let offsetX = 0;
+	let offsetY = 0;
 
-    ctx.translate(offsetX, offsetY);
-    ctx.scale(zoom, zoom);
+	let isDragging = false;
+	let dragStartX = 0;
+	let dragStartY = 0;
 
-    for (const conn of sorted_connections.value!) {
-      const fromStation = stations.value!.find((s) => s.id === conn.from);
-      const toStation = stations.value!.find((s) => s.id === conn.to);
-      if (!fromStation || !toStation) return;
+	let misterXStation: number | undefined;
+	const detectiveStations = new Map<string, number>();
 
-      ctx.strokeStyle = MODE_DATA[conn.mode].color;
-      ctx.lineWidth = MODE_DATA[conn.mode].width;
-      ctx.beginPath();
-      ctx.moveTo(fromStation.pos_x, fromStation.pos_y);
-      ctx.lineTo(toStation.pos_x, toStation.pos_y);
-      ctx.stroke();
-    }
+	function draw_station(ctx: CanvasRenderingContext2D, station: Station) {
+		ctx.fillStyle = "#445";
+		ctx.beginPath();
+		ctx.arc(station.pos_x, station.pos_y, STATION_DISTANCE, 0, Math.PI * 2);
+		ctx.fill();
 
-    for (const station of stations.value!) {
-      ctx.fillStyle = "black";
-      ctx.beginPath();
-      ctx.arc(station.pos_x, station.pos_y, STATION_DISTANCE, 0, Math.PI * 2);
-      ctx.fill();
+		ctx.fillStyle = "white";
+		ctx.font = "20px Arial";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.fillText(station.id.toString(), station.pos_x, station.pos_y);
+	}
 
-      ctx.fillStyle = "white";
-      ctx.font = "20px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(station.id.toString(), station.pos_x, station.pos_y);
-    }
+	function draw_connection(
+		ctx: CanvasRenderingContext2D,
+		connection: Connection,
+	) {
+		const fromStation = stations.value!.find((s) => s.id === connection.from);
+		const toStation = stations.value!.find((s) => s.id === connection.to);
+		if (!fromStation || !toStation) return;
 
-    ctx.restore();
-  }
+		ctx.strokeStyle = MODE_DATA[connection.mode].color;
+		ctx.lineWidth = MODE_DATA[connection.mode].width;
+		ctx.beginPath();
+		ctx.moveTo(fromStation.pos_x, fromStation.pos_y);
+		ctx.lineTo(toStation.pos_x, toStation.pos_y);
+		ctx.stroke();
+	}
 
-  onMounted(() => {
-    if (canvasRef.value) {
-      const observer = new ResizeObserver(resizeCanvas);
-      observer.observe(canvasRef.value);
+	function draw_pawn(
+		ctx: CanvasRenderingContext2D,
+		color: string,
+		stationId: number,
+	) {
+		const station = stations.value!.find((s) => s.id === stationId);
 
-      canvasRef.value.addEventListener("wheel", onWheel);
-      canvasRef.value.addEventListener("mousedown", onMouseDown);
-      canvasRef.value.addEventListener("mousemove", onMouseMove);
-      canvasRef.value.addEventListener("mouseup", onMouseUp);
-      canvasRef.value.addEventListener("click", onClick);
-    }
+		if (!station) return;
 
-    resizeCanvas();
-  });
-  watch([stations, connections], () => draw());
+		ctx.fillStyle = color;
+		ctx.beginPath();
+		ctx.arc(station.pos_x, station.pos_y, STATION_DISTANCE / 2, 0, Math.PI * 2);
+		ctx.fill();
+	}
 
-  function resizeCanvas() {
-    if (!canvasRef.value) return;
+	function draw() {
+		if (
+			!canvasRef.value ||
+			!stations.value ||
+			!connections.value ||
+			!sorted_connections.value
+		)
+			return;
 
-    const rect = canvasRef.value!.getBoundingClientRect();
-    canvasRef.value!.width = rect.width;
-    canvasRef.value!.height = rect.height;
+		const ctx = canvasRef.value.getContext("2d");
+		if (!ctx) return;
 
-    draw();
-  }
+		ctx.save();
+		ctx.fillStyle = "lightblue";
+		ctx.fillRect(0, 0, canvasRef.value.width, canvasRef.value.height);
 
-  function onWheel(event: WheelEvent) {
-    event.preventDefault();
+		ctx.translate(offsetX, offsetY);
+		ctx.scale(zoom, zoom);
 
-    const rect = canvasRef.value!.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
+		for (const conn of sorted_connections.value!) {
+			draw_connection(ctx, conn);
+		}
 
-    const scaleAmount = -event.deltaY * 0.001;
-    const newZoom = Math.min(Math.max(zoom + scaleAmount, 0.1), 5);
+		for (const station of stations.value!) {
+			draw_station(ctx, station);
+		}
 
-    offsetX -= (mouseX - offsetX) * (newZoom / zoom - 1);
-    offsetY -= (mouseY - offsetY) * (newZoom / zoom - 1);
+		if (misterXStation !== undefined) {
+			draw_pawn(ctx, "black", misterXStation);
+		}
 
-    zoom = newZoom;
-    draw();
-  }
+		for (const [color, stationId] of detectiveStations.entries()) {
+			draw_pawn(ctx, color, stationId);
+		}
 
-  function onMouseDown(event: MouseEvent) {
-    event.preventDefault();
+		ctx.restore();
+	}
 
-    if (event.button !== MIDDLE_MOUSE_BUTTON) return;
+	function resizeCanvas() {
+		if (!canvasRef.value) return;
 
-    isDragging = true;
-    dragStartX = event.clientX - offsetX;
-    dragStartY = event.clientY - offsetY;
-  }
+		const rect = canvasRef.value!.getBoundingClientRect();
+		canvasRef.value!.width = rect.width;
+		canvasRef.value!.height = rect.height;
 
-  function onMouseMove(event: MouseEvent) {
-    if (!isDragging) return;
+		draw();
+	}
 
-    offsetX = event.clientX - dragStartX;
-    offsetY = event.clientY - dragStartY;
+	function onWheel(event: WheelEvent) {
+		event.preventDefault();
 
-    draw();
-  }
+		const rect = canvasRef.value!.getBoundingClientRect();
+		const mouseX = event.clientX - rect.left;
+		const mouseY = event.clientY - rect.top;
 
-  function onMouseUp(event: MouseEvent) {
-    if (event.button !== MIDDLE_MOUSE_BUTTON) return;
+		const scaleAmount = -event.deltaY * 0.001;
+		const newZoom = Math.min(Math.max(zoom + scaleAmount, 0.1), 5);
 
-    isDragging = false;
-  }
+		offsetX -= (mouseX - offsetX) * (newZoom / zoom - 1);
+		offsetY -= (mouseY - offsetY) * (newZoom / zoom - 1);
 
-  function onClick(event: MouseEvent) {
-    if (!canvasRef.value || !stations.value) return;
+		zoom = newZoom;
+		draw();
+	}
 
-    const rect = canvasRef.value.getBoundingClientRect();
-    const mouseX = (event.clientX - rect.left - offsetX) / zoom;
-    const mouseY = (event.clientY - rect.top - offsetY) / zoom;
+	function onMouseDown(event: MouseEvent) {
+		event.preventDefault();
 
-    stations.value.forEach((station) => {
-      const dx = mouseX - station.pos_x;
-      const dy = mouseY - station.pos_y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance <= STATION_DISTANCE) {
-        onStationClick(station.id);
-      }
-    });
-  }
+		if (event.button !== MIDDLE_MOUSE_BUTTON) return;
 
-  function onStationClick(id: number) {
-    console.log("Station geklickt:", id);
-  }
+		isDragging = true;
+		dragStartX = event.clientX - offsetX;
+		dragStartY = event.clientY - offsetY;
+	}
+
+	function onMouseMove(event: MouseEvent) {
+		if (!isDragging) return;
+
+		offsetX = event.clientX - dragStartX;
+		offsetY = event.clientY - dragStartY;
+
+		draw();
+	}
+
+	function onMouseUp(event: MouseEvent) {
+		if (event.button !== MIDDLE_MOUSE_BUTTON) return;
+
+		isDragging = false;
+	}
+
+	function onClick(event: MouseEvent) {
+		if (!canvasRef.value || !stations.value) return;
+
+		const rect = canvasRef.value.getBoundingClientRect();
+		const mouseX = (event.clientX - rect.left - offsetX) / zoom;
+		const mouseY = (event.clientY - rect.top - offsetY) / zoom;
+
+		stations.value.forEach((station) => {
+			const dx = mouseX - station.pos_x;
+			const dy = mouseY - station.pos_y;
+			const distance = Math.sqrt(dx * dx + dy * dy);
+			if (distance <= STATION_DISTANCE) {
+				onStationClick(station.id);
+			}
+		});
+	}
+
+	function onStationClick(id: number) {
+		console.log("Station geklickt:", id);
+	}
+
+	function setMisterX(station: number | undefined) {
+		misterXStation = station;
+		draw();
+	}
+
+	function setDetective(color: string, station: number) {
+		detectiveStations.set(color, station);
+		draw();
+	}
+
+	return {
+		setMisterX,
+		setDetective,
+	};
 }
