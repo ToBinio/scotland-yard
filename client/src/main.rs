@@ -1,15 +1,18 @@
 use bevy::{color::palettes::basic::*, input_focus::InputFocus, prelude::*};
+use bevy_ui_text_input::{
+    TextInputContents, TextInputMode, TextInputNode, TextInputPlugin, TextInputPrompt,
+};
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins((DefaultPlugins, TextInputPlugin))
         .init_resource::<InputFocus>()
         .add_systems(Startup, setup)
         .add_systems(Update, button_system)
         .run();
 }
 
-const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
+const BUTTON_BACKGROUND: Color = Color::srgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::srgb(0.35, 0.75, 0.35);
 
@@ -28,7 +31,7 @@ fn button_system(
     >,
     mut text_query: Query<&mut Text>,
 ) {
-    for (entity, interaction, mut color, mut border_color, mut button, children) in
+    for (entity, interaction, mut background_color, mut border_color, mut button, children) in
         &mut interaction_query
     {
         let mut text = text_query.get_mut(children[0]).unwrap();
@@ -37,7 +40,7 @@ fn button_system(
             Interaction::Pressed => {
                 input_focus.set(entity);
                 **text = "Press".to_string();
-                *color = PRESSED_BUTTON.into();
+                *background_color = PRESSED_BUTTON.into();
                 *border_color = BorderColor::all(RED);
 
                 // The accessibility system's only update the button's state when the `Button` component is marked as changed.
@@ -46,14 +49,14 @@ fn button_system(
             Interaction::Hovered => {
                 input_focus.set(entity);
                 **text = "Hover".to_string();
-                *color = HOVERED_BUTTON.into();
+                *background_color = HOVERED_BUTTON.into();
                 *border_color = BorderColor::all(Color::WHITE);
                 button.set_changed();
             }
             Interaction::None => {
                 input_focus.clear();
                 **text = "Button".to_string();
-                *color = NORMAL_BUTTON.into();
+                *background_color = BUTTON_BACKGROUND.into();
                 *border_color = BorderColor::all(Color::BLACK);
             }
         }
@@ -78,44 +81,46 @@ fn setup_ui() -> impl Bundle {
         },
         children![
             (
-                Button,
+                TextInputNode {
+                    mode: TextInputMode::SingleLine,
+                    clear_on_submit: false,
+                    ..default()
+                },
+                TextFont {
+                    font_size: 16.0,
+                    ..default()
+                },
+                TextInputContents::default(),
+                TextInputPrompt::new("please enter..."),
                 Node {
-                    width: px(150),
+                    width: px(300),
                     height: px(65),
                     border: UiRect::all(px(1)),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
-                    border_radius: BorderRadius::px(5., 5., 5., 5.),
                     ..default()
                 },
-                BorderColor::all(Color::WHITE),
-                BackgroundColor(Color::BLACK),
-                children![(
-                    Text::new("Button"),
-                    TextFont {
-                        font_size: 33.0,
-                        ..default()
-                    },
-                    TextColor(Color::srgb(0.9, 0.9, 0.9)),
-                )]
+                BorderRadius::all(px(5.)),
+                BorderColor::all(Color::BLACK),
+                BackgroundColor(BUTTON_BACKGROUND),
             ),
             (
                 Button,
                 Node {
-                    width: px(150),
+                    width: px(300),
                     height: px(65),
                     border: UiRect::all(px(1)),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
-                    border_radius: BorderRadius::px(5., 5., 5., 5.),
                     ..default()
                 },
-                BorderColor::all(Color::WHITE),
-                BackgroundColor(Color::BLACK),
+                BorderColor::all(Color::BLACK),
+                BackgroundColor(BUTTON_BACKGROUND),
+                BorderRadius::all(px(5.)),
                 children![(
                     Text::new("Button"),
                     TextFont {
-                        font_size: 33.0,
+                        font_size: 16.0,
                         ..default()
                     },
                     TextColor(Color::srgb(0.9, 0.9, 0.9)),
