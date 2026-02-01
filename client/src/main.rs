@@ -2,16 +2,16 @@ use std::time::Duration;
 
 use futures_timer::Delay;
 use gpui::{
-    App, Application, Bounds, Context, SharedString, Window, WindowBounds, WindowOptions, canvas,
-    div, fill, point, prelude::*, px, rgb, size,
+    App, Application, Bounds, Context, Entity, SharedString, Window, WindowBounds, WindowOptions,
+    canvas, div, fill, point, prelude::*, px, rgb, size,
 };
 
 struct HelloWorld {
-    text: SharedString,
+    map_data: Entity<MapData>,
 }
 
 impl Render for HelloWorld {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .flex()
             .flex_col()
@@ -24,7 +24,7 @@ impl Render for HelloWorld {
             .shadow_lg()
             .child(
                 div()
-                    .child(format!("Hello, {}!", &self.text))
+                    .child(format!("Hello, {}!", &self.map_data.read(cx).text))
                     .text_xl()
                     .text_color(rgb(0xffffff))
                     .on_mouse_down(gpui::MouseButton::Left, |_, _, _| {
@@ -45,9 +45,17 @@ impl Render for HelloWorld {
     }
 }
 
+#[derive(Debug, Clone)]
+struct MapData {
+    text: SharedString,
+}
+
 fn main() {
     Application::new().run(|cx: &mut App| {
         let bounds = Bounds::centered(None, size(px(500.), px(500.0)), cx);
+
+        let map_data = cx.new(|_| MapData { text: "Map".into() });
+
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
@@ -55,16 +63,21 @@ fn main() {
             },
             |_, cx| {
                 cx.new(|_| HelloWorld {
-                    text: "World".into(),
+                    map_data: map_data.clone(),
                 })
             },
         )
         .unwrap();
 
-        cx.background_spawn(async {
+        cx.spawn(async move |app| {
             loop {
-                println!("Hello, World! - from background");
-                Delay::new(Duration::from_secs(1)).await;
+                Delay::new(Duration::from_secs(5)).await;
+                map_data
+                    .update(app, |data, app| {
+                        data.text = "Updated Map".into();
+                        app.notify()
+                    })
+                    .unwrap();
             }
         })
         .detach();
