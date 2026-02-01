@@ -1,131 +1,74 @@
-use bevy::{color::palettes::basic::*, input_focus::InputFocus, prelude::*};
-use bevy_ui_text_input::{
-    TextInputContents, TextInputMode, TextInputNode, TextInputPlugin, TextInputPrompt,
+use std::time::Duration;
+
+use futures_timer::Delay;
+use gpui::{
+    App, Application, Bounds, Context, SharedString, Window, WindowBounds, WindowOptions, canvas,
+    div, fill, point, prelude::*, px, rgb, size,
 };
 
-fn main() {
-    App::new()
-        .add_plugins((DefaultPlugins, TextInputPlugin))
-        .init_resource::<InputFocus>()
-        .add_systems(Startup, setup)
-        .add_systems(Update, button_system)
-        .run();
+struct HelloWorld {
+    text: SharedString,
 }
 
-const BUTTON_BACKGROUND: Color = Color::srgb(0.15, 0.15, 0.15);
-const HOVERED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);
-const PRESSED_BUTTON: Color = Color::srgb(0.35, 0.75, 0.35);
-
-fn button_system(
-    mut input_focus: ResMut<InputFocus>,
-    mut interaction_query: Query<
-        (
-            Entity,
-            &Interaction,
-            &mut BackgroundColor,
-            &mut BorderColor,
-            &mut Button,
-            &Children,
-        ),
-        Changed<Interaction>,
-    >,
-    mut text_query: Query<&mut Text>,
-) {
-    for (entity, interaction, mut background_color, mut border_color, mut button, children) in
-        &mut interaction_query
-    {
-        let mut text = text_query.get_mut(children[0]).unwrap();
-
-        match *interaction {
-            Interaction::Pressed => {
-                input_focus.set(entity);
-                **text = "Press".to_string();
-                *background_color = PRESSED_BUTTON.into();
-                *border_color = BorderColor::all(RED);
-
-                // The accessibility system's only update the button's state when the `Button` component is marked as changed.
-                button.set_changed();
-            }
-            Interaction::Hovered => {
-                input_focus.set(entity);
-                **text = "Hover".to_string();
-                *background_color = HOVERED_BUTTON.into();
-                *border_color = BorderColor::all(Color::WHITE);
-                button.set_changed();
-            }
-            Interaction::None => {
-                input_focus.clear();
-                **text = "Button".to_string();
-                *background_color = BUTTON_BACKGROUND.into();
-                *border_color = BorderColor::all(Color::BLACK);
-            }
-        }
+impl Render for HelloWorld {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .bg(rgb(0x505050))
+            .w_full()
+            .h_full()
+            .justify_center()
+            .items_center()
+            .shadow_lg()
+            .child(
+                div()
+                    .child(format!("Hello, {}!", &self.text))
+                    .text_xl()
+                    .text_color(rgb(0xffffff))
+                    .on_mouse_down(gpui::MouseButton::Left, |_, _, _| {
+                        println!("Mouse down event");
+                    }),
+            )
+            .child(
+                canvas(
+                    |_, _, _| (),
+                    |_, _, window, _| {
+                        let rect = Bounds::new(point(px(50.), px(50.)), size(px(100.), px(100.)));
+                        window.paint_quad(fill(rect, rgb(0xff00ff)));
+                    },
+                )
+                .w_full()
+                .h_full(),
+            )
     }
 }
 
-fn setup(mut commands: Commands) {
-    commands.spawn(Camera2d);
-    commands.spawn(setup_ui());
-}
+fn main() {
+    Application::new().run(|cx: &mut App| {
+        let bounds = Bounds::centered(None, size(px(500.), px(500.0)), cx);
+        cx.open_window(
+            WindowOptions {
+                window_bounds: Some(WindowBounds::Windowed(bounds)),
+                ..Default::default()
+            },
+            |_, cx| {
+                cx.new(|_| HelloWorld {
+                    text: "World".into(),
+                })
+            },
+        )
+        .unwrap();
 
-fn setup_ui() -> impl Bundle {
-    (
-        Node {
-            width: percent(100),
-            height: percent(100),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            flex_direction: FlexDirection::Column,
-            row_gap: px(10.0),
-            ..default()
-        },
-        children![
-            (
-                TextInputNode {
-                    mode: TextInputMode::SingleLine,
-                    clear_on_submit: false,
-                    ..default()
-                },
-                TextFont {
-                    font_size: 16.0,
-                    ..default()
-                },
-                TextInputContents::default(),
-                TextInputPrompt::new("please enter..."),
-                Node {
-                    width: px(300),
-                    height: px(65),
-                    border: UiRect::all(px(1)),
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
-                BorderRadius::all(px(5.)),
-                BorderColor::all(Color::BLACK),
-                BackgroundColor(BUTTON_BACKGROUND),
-            ),
-            (
-                Button,
-                Node {
-                    width: px(300),
-                    height: px(65),
-                    border: UiRect::all(px(1)),
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
-                BorderColor::all(Color::BLACK),
-                BackgroundColor(BUTTON_BACKGROUND),
-                BorderRadius::all(px(5.)),
-                children![(
-                    Text::new("Button"),
-                    TextFont {
-                        font_size: 16.0,
-                        ..default()
-                    },
-                    TextColor(Color::srgb(0.9, 0.9, 0.9)),
-                )]
-            )
-        ],
-    )
+        cx.background_spawn(async {
+            loop {
+                println!("Hello, World! - from background");
+                Delay::new(Duration::from_secs(1)).await;
+            }
+        })
+        .detach();
+
+        cx.activate(true);
+    })
 }

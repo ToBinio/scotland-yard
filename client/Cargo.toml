@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.17.0", features = ["dynamic_linking"] } #bevy 0.18 blocked by https://github.com/ickshonpe/bevy_ui_text_input/pull/45
-bevy_ui_text_input = "0.6.0"
+futures-timer = "3.0.3"
+gpui = { version = "0.2.2" }
