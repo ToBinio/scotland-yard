@@ -1103,6 +1103,7 @@ dependencies = [
  "futures-timer",
  "game",
  "gpui-ce",
+ "itertools 0.14.0",
  "packets",
  "reqwest",
  "serde",

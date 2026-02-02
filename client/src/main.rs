@@ -1,11 +1,9 @@
-use std::time::Duration;
-
-use futures_timer::Delay;
 use game::data::{Connection, Station};
 use gpui::{
-    App, Application, Bounds, Context, Entity, Window, WindowBounds, WindowOptions, canvas, div,
-    fill, point, prelude::*, px, rgb, size,
+    App, Application, Background, Bounds, Context, Entity, PaintQuad, Pixels, Point, Window,
+    WindowBounds, WindowOptions, canvas, div, fill, point, prelude::*, px, rgb, size,
 };
+use itertools::Itertools;
 
 struct HelloWorld {
     map_data: Entity<MapData>,
@@ -13,6 +11,8 @@ struct HelloWorld {
 
 impl Render for HelloWorld {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let map_data = self.map_data.clone();
+
         div()
             .flex()
             .flex_col()
@@ -27,8 +27,7 @@ impl Render for HelloWorld {
                 div()
                     .child(format!(
                         "Hello, {}!",
-                        &self
-                            .map_data
+                        map_data
                             .read(cx)
                             .stations
                             .get(0)
@@ -44,15 +43,52 @@ impl Render for HelloWorld {
             .child(
                 canvas(
                     |_, _, _| (),
-                    |_, _, window, _| {
-                        let rect = Bounds::new(point(px(50.), px(50.)), size(px(100.), px(100.)));
-                        window.paint_quad(fill(rect, rgb(0xff00ff)));
+                    move |_, _, window, cx| {
+                        let stations = &map_data.read(cx).stations;
+
+                        for station in stations {
+                            station
+                                .types
+                                .iter()
+                                .map(|station_type| match station_type {
+                                    game::data::StationType::Taxi => (px(25.0), rgb(0xff00ff)),
+                                    game::data::StationType::Bus => (px(20.0), rgb(0x00ff00)),
+                                    game::data::StationType::Underground => {
+                                        (px(0.0), rgb(0x0000ff))
+                                    }
+                                    game::data::StationType::Water => (px(10.0), rgb(0x00ffff)),
+                                })
+                                .sorted_by(|(size_a, _), (size_b, _)| size_a.cmp(size_b).reverse())
+                                .for_each(|(size, color)| {
+                                    window.paint_quad(fill_circle(
+                                        point(
+                                            (station.pos_x as f64 / 2.0).into(),
+                                            (station.pos_y as f64 / 2.0).into(),
+                                        ),
+                                        size / 2.0,
+                                        color,
+                                    ));
+                                });
+                        }
                     },
                 )
                 .w_full()
                 .h_full(),
             )
     }
+}
+
+pub fn fill_circle(
+    center: Point<Pixels>,
+    radius: Pixels,
+    background: impl Into<Background>,
+) -> PaintQuad {
+    let bounds = Bounds::new(
+        center - point(radius, radius),
+        size(radius * 2.0, radius * 2.0),
+    );
+
+    fill(bounds, background).corner_radii(radius)
 }
 
 #[derive(Debug)]
@@ -84,9 +120,6 @@ fn main() {
         .unwrap();
 
         cx.spawn(async move |app| {
-            //todo remove testing duration
-            Delay::new(Duration::from_secs(5)).await;
-
             let station_task = app.spawn(async |_| {
                 reqwest::blocking::get("http://localhost:8081/map/stations")
                     .unwrap()
