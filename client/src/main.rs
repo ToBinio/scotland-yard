@@ -1,3 +1,6 @@
+use std::time::Duration;
+
+use futures_timer::Delay;
 use game::data::{Connection, Station};
 use gpui::{
     App, Application, Background, Bounds, Context, Entity, PaintQuad, Pixels, Point, Window,
@@ -121,17 +124,34 @@ fn main() {
 
         cx.spawn(async move |app| {
             let station_task = app.spawn(async |_| {
-                reqwest::blocking::get("http://localhost:8081/map/stations")
-                    .unwrap()
-                    .json::<Vec<Station>>()
-                    .unwrap()
+                loop {
+                    match reqwest::blocking::get("http://localhost:8081/map/stations")
+                        .and_then(|response| response.json::<Vec<Station>>())
+                    {
+                        Ok(stations) => return stations,
+                        Err(err) => {
+                            println!("Failed to fetch stations: {} - retrying in 1 second", err);
+                            Delay::new(Duration::from_millis(1000)).await;
+                        }
+                    }
+                }
             });
 
             let connection_task = app.spawn(async |_| {
-                reqwest::blocking::get("http://localhost:8081/map/connections")
-                    .unwrap()
-                    .json::<Vec<Connection>>()
-                    .unwrap()
+                loop {
+                    match reqwest::blocking::get("http://localhost:8081/map/connections")
+                        .and_then(|response| response.json::<Vec<Connection>>())
+                    {
+                        Ok(connections) => return connections,
+                        Err(err) => {
+                            println!(
+                                "Failed to fetch connections: {} - retrying in 1 second",
+                                err
+                            );
+                            Delay::new(Duration::from_millis(1000)).await;
+                        }
+                    }
+                }
             });
 
             let stations = station_task.await;
