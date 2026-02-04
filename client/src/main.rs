@@ -1,12 +1,12 @@
-use std::time::Duration;
-
-use futures_timer::Delay;
-use game::data::{Connection, Station};
 use gpui::{
-    App, Application, Background, Bounds, Context, Entity, PaintQuad, Pixels, Point, Window,
-    WindowBounds, WindowOptions, canvas, div, fill, point, prelude::*, px, rgb, size,
+    App, Application, Background, Bounds, ContentMask, Context, Entity, PaintQuad, Pixels, Point,
+    Window, WindowBounds, WindowOptions, canvas, div, fill, point, prelude::*, px, rgb, size,
 };
 use itertools::Itertools;
+
+use crate::map_data::MapData;
+
+mod map_data;
 
 struct HelloWorld {
     map_data: Entity<MapData>,
@@ -32,7 +32,7 @@ impl Render for HelloWorld {
                         "Hello, {}!",
                         map_data
                             .read(cx)
-                            .stations
+                            .stations()
                             .get(0)
                             .map(|station| station.id.to_string())
                             .unwrap_or("idk".to_string())
@@ -46,35 +46,41 @@ impl Render for HelloWorld {
             .child(
                 canvas(
                     |_, _, _| (),
-                    move |_, _, window, cx| {
-                        let stations = &map_data.read(cx).stations;
+                    move |bounds, _, window, cx| {
+                        let stations = map_data.read(cx).stations();
 
-                        for station in stations {
-                            station
-                                .types
-                                .iter()
-                                .map(|station_type| match station_type {
-                                    game::data::StationType::Taxi => (px(25.0), rgb(0xff00ff)),
-                                    game::data::StationType::Bus => (px(20.0), rgb(0x00ff00)),
-                                    game::data::StationType::Underground => {
-                                        (px(0.0), rgb(0x0000ff))
-                                    }
-                                    game::data::StationType::Water => (px(10.0), rgb(0x00ffff)),
-                                })
-                                .sorted_by(|(size_a, _), (size_b, _)| size_a.cmp(size_b).reverse())
-                                .for_each(|(size, color)| {
-                                    window.paint_quad(fill_circle(
-                                        point(
-                                            (station.pos_x as f64 / 2.0).into(),
-                                            (station.pos_y as f64 / 2.0).into(),
-                                        ),
-                                        size / 2.0,
-                                        color,
-                                    ));
-                                });
-                        }
+                        window.with_content_mask(Some(ContentMask { bounds }), |window| {
+                            for station in stations {
+                                station
+                                    .types
+                                    .iter()
+                                    .map(|station_type| match station_type {
+                                        game::data::StationType::Taxi => (px(11.0), rgb(0xff00ff)),
+                                        game::data::StationType::Bus => (px(8.0), rgb(0x00ff00)),
+                                        game::data::StationType::Underground => {
+                                            (px(5.0), rgb(0x0000ff))
+                                        }
+                                        game::data::StationType::Water => unreachable!(),
+                                    })
+                                    .sorted_by(|(size_a, _), (size_b, _)| {
+                                        size_a.cmp(size_b).reverse()
+                                    })
+                                    .for_each(|(size, color)| {
+                                        window.paint_quad(fill_circle(
+                                            point(
+                                                (station.pos_x as f64 / 2.0).into(),
+                                                (station.pos_y as f64 / 2.0).into(),
+                                            ),
+                                            size / 2.0,
+                                            color,
+                                        ));
+                                    });
+                            }
+                        });
                     },
                 )
+                .bg(rgb(0xffffff))
+                .overflow_hidden()
                 .w_full()
                 .h_full(),
             )
@@ -94,20 +100,11 @@ pub fn fill_circle(
     fill(bounds, background).corner_radii(radius)
 }
 
-#[derive(Debug)]
-struct MapData {
-    stations: Vec<Station>,
-    connections: Vec<Connection>,
-}
-
 fn main() {
     Application::new().run(|cx: &mut App| {
         let bounds = Bounds::centered(None, size(px(500.), px(500.0)), cx);
 
-        let map_data = cx.new(|_| MapData {
-            stations: vec![],
-            connections: vec![],
-        });
+        let map_data = MapData::new(cx);
 
         cx.open_window(
             WindowOptions {
@@ -121,51 +118,6 @@ fn main() {
             },
         )
         .unwrap();
-
-        cx.spawn(async move |app| {
-            let station_task = app.spawn(async |_| {
-                loop {
-                    match reqwest::blocking::get("http://localhost:8081/map/stations")
-                        .and_then(|response| response.json::<Vec<Station>>())
-                    {
-                        Ok(stations) => return stations,
-                        Err(err) => {
-                            println!("Failed to fetch stations: {} - retrying in 1 second", err);
-                            Delay::new(Duration::from_millis(1000)).await;
-                        }
-                    }
-                }
-            });
-
-            let connection_task = app.spawn(async |_| {
-                loop {
-                    match reqwest::blocking::get("http://localhost:8081/map/connections")
-                        .and_then(|response| response.json::<Vec<Connection>>())
-                    {
-                        Ok(connections) => return connections,
-                        Err(err) => {
-                            println!(
-                                "Failed to fetch connections: {} - retrying in 1 second",
-                                err
-                            );
-                            Delay::new(Duration::from_millis(1000)).await;
-                        }
-                    }
-                }
-            });
-
-            let stations = station_task.await;
-            let connections = connection_task.await;
-
-            map_data
-                .update(app, |data, app| {
-                    data.stations = stations;
-                    data.connections = connections;
-                    app.notify()
-                })
-                .unwrap();
-        })
-        .detach();
 
         cx.activate(true);
     })
