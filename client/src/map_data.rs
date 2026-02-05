@@ -2,9 +2,9 @@ use std::time::Duration;
 
 use futures_timer::Delay;
 use game::data::{Connection, Station};
-use gpui::{App, AppContext, Entity};
+use gpui::Context;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct MapData {
     stations: Vec<Station>,
     connections: Vec<Connection>,
@@ -21,11 +21,8 @@ impl MapData {
 }
 
 impl MapData {
-    pub fn new(cx: &mut App) -> Entity<Self> {
-        let map_data = cx.new(|_| MapData::default());
-
-        let data = map_data.clone();
-        cx.spawn(async move |app| {
+    pub fn init(&mut self, cx: &mut Context<Self>) {
+        cx.spawn(async move |this, app| {
             let station_task = app.spawn(async |_| {
                 loop {
                     match reqwest::blocking::get("http://localhost:8081/map/stations")
@@ -60,7 +57,7 @@ impl MapData {
             let stations = station_task.await;
             let connections = connection_task.await;
 
-            data.update(app, |data, app| {
+            this.update(app, |data, app| {
                 data.stations = stations;
                 data.connections = connections;
                 app.notify()
@@ -68,7 +65,5 @@ impl MapData {
             .unwrap();
         })
         .detach();
-
-        map_data
     }
 }

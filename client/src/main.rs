@@ -3,19 +3,26 @@ use gpui::{
     prelude::*, px, rgb, size,
 };
 
-use crate::{map::Map, map_data::MapData};
+use crate::map::Map;
 
 pub mod map;
+pub mod map_canvas;
 pub mod map_data;
 
 struct HelloWorld {
-    map_data: Entity<MapData>,
+    map: Entity<Map>,
+}
+
+impl HelloWorld {
+    fn new(cx: &mut Context<Self>) -> Self {
+        Self {
+            map: cx.new(|cx| Map::new(cx)),
+        }
+    }
 }
 
 impl Render for HelloWorld {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-        let map_data = self.map_data.clone();
-
         div()
             .flex()
             .flex_col()
@@ -31,7 +38,7 @@ impl Render for HelloWorld {
                     .text_xl()
                     .text_color(rgb(0xffffff)),
             )
-            .child(Map::new(map_data.clone()))
+            .child(self.map.clone())
     }
 }
 
@@ -39,18 +46,12 @@ fn main() {
     Application::new().run(|cx: &mut App| {
         let bounds = Bounds::centered(None, size(px(500.), px(500.0)), cx);
 
-        let map_data = MapData::new(cx);
-
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            |_, cx| {
-                cx.new(|_| HelloWorld {
-                    map_data: map_data.clone(),
-                })
-            },
+            |_, cx| cx.new(|cx| HelloWorld::new(cx)),
         )
         .unwrap();
 

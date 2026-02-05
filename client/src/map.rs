@@ -1,95 +1,47 @@
-use game::data::{Station, StationType};
-use gpui::{Entity, IntoElement, Rgba, Window, canvas, div};
-
-use crate::map_data::MapData;
 use gpui::{
-    App, Background, Bounds, PaintQuad, Pixels, Point, fill, point, prelude::*, px, rgb, size,
+    AppContext, Context, Entity, IntoElement, ParentElement, Pixels, Point, Render, Styled, div,
+    point, px,
 };
-use itertools::Itertools;
 
-#[derive(IntoElement)]
-pub struct Map {
-    map_data: Entity<MapData>,
-    render_state: RenderState,
+use crate::{map_canvas::MapCanvas, map_data::MapData};
+
+#[derive(Debug, Clone)]
+pub struct RenderState {
+    pub offset: Point<Pixels>,
 }
 
-struct RenderState {
-    center: Point<Pixels>,
+pub struct Map {
+    map_data: Entity<MapData>,
+    render_state: Entity<RenderState>,
 }
 
 impl Map {
-    pub fn new(data: Entity<MapData>) -> Self {
+    pub fn new(cx: &mut Context<Self>) -> Self {
         Self {
-            map_data: data,
-            render_state: RenderState {
-                center: point(px(0.0), px(0.0)),
-            },
+            map_data: cx.new(|cx| {
+                let mut map_data = MapData::default();
+                map_data.init(cx);
+                map_data
+            }),
+            render_state: cx.new(|_| RenderState {
+                offset: point(px(-750.0), px(-500.0)),
+            }),
         }
-    }
-
-    fn draw(&self, window: &mut Window, cx: &mut App) {
-        let stations = self.map_data.read(cx).stations();
-
-        for station in stations {
-            self.draw_station(window, station);
-        }
-    }
-
-    fn draw_station(&self, window: &mut Window, station: &Station) {
-        let position = point(
-            (station.pos_x as f64 / 2.0).into(),
-            (station.pos_y as f64 / 2.0).into(),
-        ) + self.render_state.center;
-
-        station
-            .types
-            .iter()
-            .map(station_type_settings)
-            .sorted_by(|(size_a, _), (size_b, _)| size_a.cmp(size_b).reverse())
-            .for_each(|(size, color)| {
-                window.paint_quad(fill_circle(position, size / 2.0, color));
-            });
     }
 }
 
-impl RenderOnce for Map {
-    fn render(mut self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        div()
-            .child(
-                canvas(
-                    |_, _, _| (),
-                    move |bounds, _, window, cx| {
-                        self.render_state.center = bounds.center();
+impl Render for Map {
+    fn render(
+        &mut self,
+        _window: &mut gpui::Window,
+        cx: &mut gpui::Context<Self>,
+    ) -> impl IntoElement {
+        let map_data = self.map_data.read(cx);
+        let render_state = self.render_state.read(cx);
 
-                        self.draw(window, cx)
-                    },
-                )
-                .bg(rgb(0xffffff))
-                .size_full(),
-            )
+        div()
+            .child(MapCanvas::new(map_data.clone(), render_state.clone()))
             .overflow_hidden()
             .size_full()
-    }
-}
-
-fn fill_circle(
-    center: Point<Pixels>,
-    radius: Pixels,
-    background: impl Into<Background>,
-) -> PaintQuad {
-    let bounds = Bounds::new(
-        center - point(radius, radius),
-        size(radius * 2.0, radius * 2.0),
-    );
-
-    fill(bounds, background).corner_radii(radius)
-}
-
-fn station_type_settings(station_type: &StationType) -> (Pixels, Rgba) {
-    match station_type {
-        game::data::StationType::Taxi => (px(11.0), rgb(0xff00ff)),
-        game::data::StationType::Bus => (px(8.0), rgb(0x00ff00)),
-        game::data::StationType::Underground => (px(5.0), rgb(0x0000ff)),
-        game::data::StationType::Water => unreachable!(),
     }
 }
