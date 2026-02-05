@@ -16,7 +16,7 @@ struct HelloWorld {
 impl HelloWorld {
     fn new(cx: &mut Context<Self>) -> Self {
         Self {
-            map: cx.new(|cx| Map::new(cx)),
+            map: cx.new(Map::new),
         }
     }
 }
@@ -51,7 +51,7 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            |_, cx| cx.new(|cx| HelloWorld::new(cx)),
+            |_, cx| cx.new(HelloWorld::new),
         )
         .unwrap();
 
