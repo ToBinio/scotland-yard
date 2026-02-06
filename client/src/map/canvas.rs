@@ -1,5 +1,5 @@
-use game::data::{Station, StationType};
-use gpui::{IntoElement, Rgba, Window, canvas};
+use game::data::{Connection, Station, StationType};
+use gpui::{IntoElement, PathBuilder, Rgba, Window, canvas};
 
 use gpui::{
     App, Background, Bounds, PaintQuad, Pixels, Point, fill, point, prelude::*, px, rgb, size,
@@ -27,18 +27,27 @@ impl MapCanvas {
     }
 
     fn draw(&self, window: &mut Window, _cx: &mut App) {
-        let stations = self.map_data.stations();
+        for connection in self.map_data.connections() {
+            self.draw_connection(window, connection, self.map_data.stations());
+        }
 
-        for station in stations {
+        for station in self.map_data.stations() {
             self.draw_station(window, station);
         }
     }
 
+    fn to_screen_space(&self, point: Point<Pixels>) -> Point<Pixels> {
+        let point = point + self.render_state.offset;
+        let point = point * self.render_state.zoom;
+        let point = point + self.center;
+        point
+    }
+
     fn draw_station(&self, window: &mut Window, station: &Station) {
-        let position = point((station.pos_x as f64).into(), (station.pos_y as f64).into());
-        let position = position + self.render_state.offset;
-        let position = position * self.render_state.zoom;
-        let position = position + self.center;
+        let position = self.to_screen_space(point(
+            (station.pos_x as f64).into(),
+            (station.pos_y as f64).into(),
+        ));
 
         station
             .types
@@ -49,6 +58,25 @@ impl MapCanvas {
                 let size = (size / 2.0) * self.render_state.zoom;
                 window.paint_quad(fill_circle(position, size, color));
             });
+    }
+
+    fn draw_connection(
+        &self,
+        window: &mut Window,
+        connection: &Connection,
+        stations: &Vec<Station>,
+    ) {
+        let (width, color) = station_type_settings(&connection.mode);
+
+        let from = stations.iter().find(|s| s.id == connection.from).unwrap();
+        let to = stations.iter().find(|s| s.id == connection.to).unwrap();
+
+        let mut builder = PathBuilder::stroke(width / 4.);
+        builder.move_to(self.to_screen_space(point(px(from.pos_x as f32), px(from.pos_y as f32))));
+        builder.line_to(self.to_screen_space(point(px(to.pos_x as f32), px(to.pos_y as f32))));
+        let path = builder.build().unwrap();
+
+        window.paint_path(path, color);
     }
 }
 
@@ -83,6 +111,6 @@ fn station_type_settings(station_type: &StationType) -> (Pixels, Rgba) {
         game::data::StationType::Taxi => (px(8.0), rgb(0xF2C94C)),
         game::data::StationType::Bus => (px(12.0), rgb(0x27AE60)),
         game::data::StationType::Underground => (px(16.0), rgb(0x2F80ED)),
-        game::data::StationType::Water => unreachable!(),
+        game::data::StationType::Water => (px(20.0), rgb(0x0000FF)),
     }
 }
