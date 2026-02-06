@@ -1,11 +1,13 @@
 use game::data::{Station, StationType};
 use gpui::{IntoElement, Rgba, Window, canvas};
 
-use crate::{map::RenderState, map_data::MapData};
 use gpui::{
     App, Background, Bounds, PaintQuad, Pixels, Point, fill, point, prelude::*, px, rgb, size,
 };
 use itertools::Itertools;
+
+use crate::map::RenderState;
+use crate::map::data::MapData;
 
 #[derive(IntoElement)]
 pub struct MapCanvas {

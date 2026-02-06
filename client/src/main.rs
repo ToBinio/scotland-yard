@@ -6,14 +6,12 @@ use gpui::{
 use crate::map::Map;
 
 pub mod map;
-pub mod map_canvas;
-pub mod map_data;
 
-struct HelloWorld {
+struct Root {
     map: Entity<Map>,
 }
 
-impl HelloWorld {
+impl Root {
     fn new(cx: &mut Context<Self>) -> Self {
         Self {
             map: cx.new(Map::new),
@@ -21,7 +19,7 @@ impl HelloWorld {
     }
 }
 
-impl Render for HelloWorld {
+impl Render for Root {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .flex()
@@ -51,7 +49,7 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            |_, cx| cx.new(HelloWorld::new),
+            |_, cx| cx.new(Root::new),
         )
         .unwrap();
 

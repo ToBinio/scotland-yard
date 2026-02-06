@@ -4,7 +4,10 @@ use gpui::{
     point, px,
 };
 
-use crate::{map_canvas::MapCanvas, map_data::MapData};
+use crate::map::{canvas::MapCanvas, data::MapData};
+
+mod canvas;
+mod data;
 
 #[derive(Debug, Clone)]
 pub struct RenderState {
