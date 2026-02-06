@@ -1,7 +1,7 @@
 use gpui::{
     AppContext, Context, Entity, InteractiveElement, IntoElement, MouseDownEvent, MouseMoveEvent,
     MouseUpEvent, ParentElement, Pixels, Point, Render, ScrollWheelEvent, Styled, Window, div,
-    point, px,
+    point, px, rgb,
 };
 
 use crate::map::{canvas::MapCanvas, data::MapData};
@@ -119,5 +119,6 @@ impl Render for Map {
             .on_scroll_wheel(cx.listener(Self::on_scrool_weel))
             .overflow_hidden()
             .size_full()
+            .bg(rgb(0x606060))
     }
 }
