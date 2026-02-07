@@ -18,32 +18,26 @@ pub struct GameData {
 
 impl GameData {
     fn fetch(url: &str) -> Self {
-        let stations = ureq::get(format!("{}/map/stations", url))
+        let stations: Vec<Station> = ureq::get(format!("{}/map/stations", url))
             .call()
             .unwrap()
             .body_mut()
-            .read_to_string()
+            .read_json()
             .unwrap();
 
-        let stations: Vec<Station> = serde_json::from_str(&stations).unwrap();
-
-        let connections = ureq::get(format!("{}/map/connections", url))
+        let connections: Vec<Connection> = ureq::get(format!("{}/map/connections", url))
             .call()
             .unwrap()
             .body_mut()
-            .read_to_string()
+            .read_json()
             .unwrap();
 
-        let connections: Vec<Connection> = serde_json::from_str(&connections).unwrap();
-
-        let rounds = ureq::get(format!("{}/map/rounds", url))
+        let rounds: Vec<Round> = ureq::get(format!("{}/map/rounds", url))
             .call()
             .unwrap()
             .body_mut()
-            .read_to_string()
+            .read_json()
             .unwrap();
-
-        let rounds: Vec<Round> = serde_json::from_str(&rounds).unwrap();
 
         Self {
             stations,

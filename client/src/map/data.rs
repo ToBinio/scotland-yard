@@ -25,8 +25,9 @@ impl MapData {
         cx.spawn(async move |this, app| {
             let station_task = app.spawn(async |_| {
                 loop {
-                    match reqwest::blocking::get("http://localhost:8081/map/stations")
-                        .and_then(|response| response.json::<Vec<Station>>())
+                    match ureq::get("http://localhost:8081/map/stations")
+                        .call()
+                        .and_then(|mut response| response.body_mut().read_json::<Vec<Station>>())
                     {
                         Ok(stations) => return stations,
                         Err(err) => {
@@ -39,8 +40,9 @@ impl MapData {
 
             let connection_task = app.spawn(async |_| {
                 loop {
-                    match reqwest::blocking::get("http://localhost:8081/map/connections")
-                        .and_then(|response| response.json::<Vec<Connection>>())
+                    match ureq::get("http://localhost:8081/map/connections")
+                        .call()
+                        .and_then(|mut response| response.body_mut().read_json::<Vec<Connection>>())
                     {
                         Ok(connections) => return connections,
                         Err(err) => {
