@@ -5,6 +5,7 @@ use crate::root::Root;
 pub mod map;
 pub mod root;
 pub mod sidebar;
+pub mod websocket;
 
 fn main() {
     Application::new().run(|cx: &mut App| {
