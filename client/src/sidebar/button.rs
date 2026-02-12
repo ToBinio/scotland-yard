@@ -1,10 +1,12 @@
 use gpui::{App, ClickEvent, IntoElement, Window, div, prelude::*, rgb};
 
+use crate::sidebar::EventListener;
+
 #[derive(IntoElement)]
 pub struct Button {
     id: String,
     label: String,
-    listener: Box<dyn Fn(&ClickEvent, &mut Window, &mut App)>,
+    listener: EventListener,
 }
 
 impl Button {

@@ -1086,6 +1086,7 @@ dependencies = [
  "serde_json",
  "tungstenite",
  "ureq",
+ "uuid",
 ]
 
 [[package]]

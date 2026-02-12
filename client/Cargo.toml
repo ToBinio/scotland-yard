@@ -17,4 +17,6 @@ ureq = { workspace = true }
 
 futures-timer = "3.0.3"
 
+uuid = { workspace = true }
+
 itertools = { workspace = true }

@@ -39,8 +39,7 @@ impl MapCanvas {
     fn to_screen_space(&self, point: Point<Pixels>) -> Point<Pixels> {
         let point = point + self.render_state.offset;
         let point = point * self.render_state.zoom;
-        let point = point + self.center;
-        point
+        point + self.center
     }
 
     fn draw_station(&self, window: &mut Window, station: &Station) {
@@ -60,12 +59,7 @@ impl MapCanvas {
             });
     }
 
-    fn draw_connection(
-        &self,
-        window: &mut Window,
-        connection: &Connection,
-        stations: &Vec<Station>,
-    ) {
+    fn draw_connection(&self, window: &mut Window, connection: &Connection, stations: &[Station]) {
         let (width, color) = station_type_settings(&connection.mode);
 
         let from = stations.iter().find(|s| s.id == connection.from).unwrap();
