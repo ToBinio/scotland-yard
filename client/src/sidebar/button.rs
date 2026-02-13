@@ -1,22 +1,22 @@
-use gpui::{App, ClickEvent, IntoElement, Window, div, prelude::*, rgb};
+use gpui::{App, ClickEvent, ElementId, IntoElement, Window, div, prelude::*, rgb};
 
 use crate::sidebar::EventListener;
 
 #[derive(IntoElement)]
 pub struct Button {
-    id: String,
+    id: ElementId,
     label: String,
     listener: EventListener,
 }
 
 impl Button {
     pub fn new(
-        id: String,
+        id: impl Into<ElementId>,
         label: String,
         listener: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
         Self {
-            id,
+            id: id.into(),
             label,
             listener: Box::new(listener),
         }
@@ -26,7 +26,7 @@ impl Button {
 impl RenderOnce for Button {
     fn render(self, _window: &mut gpui::Window, _cx: &mut gpui::App) -> impl IntoElement {
         div()
-            .id(self.id)
+            .id(self.id.clone())
             .child(self.label)
             .cursor_pointer()
             .bg(rgb(0x707070))

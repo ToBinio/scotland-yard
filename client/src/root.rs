@@ -1,4 +1,5 @@
 use gpui::{ClickEvent, Context, Entity, Window, div, prelude::*, rgb};
+use gpui_component::input::{Input, InputState};
 use packets::{ClientPacket, ServerPacket};
 use uuid::Uuid;
 
@@ -10,6 +11,7 @@ use crate::{
 
 pub struct Root {
     map: Entity<Map>,
+    input: Entity<InputState>,
     ws_connection: Connection,
     game_state: GameState,
 }
@@ -21,11 +23,12 @@ struct GameState {
 }
 
 impl Root {
-    pub fn new(cx: &mut Context<Self>) -> Self {
+    pub fn new(cx: &mut Context<Self>, window: &mut Window) -> Self {
         let ws_connection = Connection::new("http://localhost:8081");
 
         Self {
             map: cx.new(Map::new),
+            input: cx.new(|cx| InputState::new(window, cx)),
             ws_connection,
             game_state: GameState::default(),
         }
@@ -96,5 +99,6 @@ impl Render for Root {
                     .text_color(rgb(0xffffff)),
             )
             .child(inner.child(self.map.clone()))
+            .child(Input::new(&self.input))
     }
 }

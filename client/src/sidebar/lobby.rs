@@ -20,7 +20,7 @@ impl Sidebar {
 impl RenderOnce for Sidebar {
     fn render(self, _window: &mut gpui::Window, _cx: &mut gpui::App) -> impl IntoElement {
         div().w(px(200.)).h_full().child(Button::new(
-            "start_game".to_string(),
+            "start_game",
             "Start Game".to_string(),
             self.on_start_game.expect("No on_start_game set"),
         ))
