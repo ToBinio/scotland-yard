@@ -17,7 +17,5 @@
 </script>
 
 <template>
-	<div class="p-10 h-dvh">
-		<GameCanvas/>
-	</div>
+	<div class="p-10 h-dvh"><GameCanvas /></div>
 </template>

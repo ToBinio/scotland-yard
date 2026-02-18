@@ -11,7 +11,7 @@ const MODE_DATA: Record<
 };
 
 const STATION_DISTANCE = 20;
-const MIDDLE_MOUSE_BUTTON = 1;
+const LEFT_MOUSE_BUTTON = 0;
 
 export function useGameCanvas(canvasRef: Ref<HTMLCanvasElement | null>) {
 	const { data: stations } = useFetch<Station[]>(
@@ -169,7 +169,7 @@ export function useGameCanvas(canvasRef: Ref<HTMLCanvasElement | null>) {
 	function onMouseDown(event: MouseEvent) {
 		event.preventDefault();
 
-		if (event.button !== MIDDLE_MOUSE_BUTTON) return;
+		if (event.button !== LEFT_MOUSE_BUTTON) return;
 
 		isDragging = true;
 		dragStartX = event.clientX - offsetX;
@@ -186,7 +186,7 @@ export function useGameCanvas(canvasRef: Ref<HTMLCanvasElement | null>) {
 	}
 
 	function onMouseUp(event: MouseEvent) {
-		if (event.button !== MIDDLE_MOUSE_BUTTON) return;
+		if (event.button !== LEFT_MOUSE_BUTTON) return;
 
 		isDragging = false;
 	}

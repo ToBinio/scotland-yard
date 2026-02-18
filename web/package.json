@@ -15,15 +15,15 @@
 		"lint:summary": "biome check --reporter summary"
 	},
 	"dependencies": {
-		"@tailwindcss/vite": "^4.1.17",
-		"@vueuse/nuxt": "14.0.0",
-		"nuxt": "^4.2.1",
-		"tailwindcss": "^4.1.17",
-		"vue": "^3.5.24",
-		"vue-router": "^4.6.3"
+		"@tailwindcss/vite": "^4.2.0",
+		"@vueuse/nuxt": "14.2.1",
+		"nuxt": "^4.3.1",
+		"tailwindcss": "^4.2.0",
+		"vue": "^3.5.28",
+		"vue-router": "^5.0.2"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.8",
+		"@biomejs/biome": "^2.4.2",
 		"typescript": "^5.9.3"
 	}
 }

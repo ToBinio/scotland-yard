@@ -61,7 +61,7 @@
 			try {
 				replayData.value = JSON.parse(data);
 			} catch (error) {
-				console.error("Invalid JSON data");
+				console.error("Invalid JSON data", error);
 			}
 		};
 
@@ -80,12 +80,16 @@
 					type="file"
 					@change="onFileChange"
 				>
-				<button class="border w-full cursor-pointer" @click="onPlay">
+				<button
+					type="button"
+					class="border w-full cursor-pointer"
+					@click="onPlay"
+				>
 					Play
 				</button>
 			</div>
 			<div class="flex flex-col gap-1 flex-1 overflow-scroll">
-				<div v-for="action in replayData?.actions ?? []">
+				<div v-for="action in (replayData?.actions ?? [])">
 					<h3 class="text-xl">{{ action.type }}</h3>
 					<div>
 						{{ action.station }}
