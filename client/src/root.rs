@@ -35,18 +35,24 @@ impl Root {
     }
 
     fn create_game(&mut self, _event: &ClickEvent, _window: &mut Window, _app: &mut Context<Self>) {
-        self.ws_connection
-            .send(ClientPacket::CreateGame(packets::CreateGamePacket {
-                number_of_detectives: 4,
-            }));
+        if let Err(err) =
+            self.ws_connection
+                .send(ClientPacket::CreateGame(packets::CreateGamePacket {
+                    number_of_detectives: 4,
+                }))
+        {
+            eprintln!("Failed to create game: {}", err);
+        };
 
         let msg = self.ws_connection.receive();
 
-        if let ServerPacket::Game(game) = msg {
+        if let Ok(ServerPacket::Game(game)) = msg {
             println!("Created Game with id: {}", game.id);
             self.game_state.game_id = Some(game.id);
 
             self.connect_to_game();
+        } else {
+            eprintln!("Failed to create game");
         };
     }
 
@@ -56,8 +62,12 @@ impl Root {
             return;
         };
 
-        self.ws_connection
-            .send(ClientPacket::JoinGame(packets::JoinGamePacket { id }));
+        if let Err(err) = self
+            .ws_connection
+            .send(ClientPacket::JoinGame(packets::JoinGamePacket { id }))
+        {
+            eprintln!("Failed to join game: {}", err);
+        }
         self.game_state.state = SidebarState::LOBBY;
     }
 
