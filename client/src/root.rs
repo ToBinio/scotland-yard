@@ -1,5 +1,4 @@
 use gpui::{ClickEvent, Context, Entity, Window, div, prelude::*, rgb};
-use gpui_component::input::{Input, InputState};
 use packets::{ClientPacket, ServerPacket};
 use uuid::Uuid;
 
@@ -11,7 +10,7 @@ use crate::{
 
 pub struct Root {
     map: Entity<Map>,
-    input: Entity<InputState>,
+    default_sidebar: Entity<default::SidebarState>,
     ws_connection: Connection,
     game_state: GameState,
 }
@@ -28,7 +27,7 @@ impl Root {
 
         Self {
             map: cx.new(Map::new),
-            input: cx.new(|cx| InputState::new(window, cx)),
+            default_sidebar: cx.new(|cx| default::SidebarState::new(window, cx)),
             ws_connection,
             game_state: GameState::default(),
         }
@@ -83,7 +82,8 @@ impl Render for Root {
         match &self.game_state.state {
             SidebarState::NONE => {
                 inner = inner.child(
-                    default::Sidebar::default().on_create_game(cx.listener(Self::create_game)),
+                    default::Sidebar::new(&self.default_sidebar)
+                        .on_create_game(cx.listener(Self::create_game)),
                 );
             }
             SidebarState::LOBBY => {
@@ -109,6 +109,5 @@ impl Render for Root {
                     .text_color(rgb(0xffffff)),
             )
             .child(inner.child(self.map.clone()))
-            .child(Input::new(&self.input))
     }
 }
