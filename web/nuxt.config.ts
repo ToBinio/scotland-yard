@@ -9,5 +9,5 @@ export default defineNuxtConfig({
 		plugins: [tailwindcss()],
 	},
 
-	modules: ["@vueuse/nuxt"],
+	modules: ["@vueuse/nuxt", "reka-ui/nuxt"],
 });
